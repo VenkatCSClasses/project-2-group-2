@@ -12,8 +12,6 @@ def get_menu(url: str) -> dict:
             food = menu_item.get("food", None)
             if food is not None:
                 print(f"{food.get('name', 'Unknown Food Item')}")
-            else:
-                print(f"{menu_item.get('text', 'None')} - None")
 
     return data
 
