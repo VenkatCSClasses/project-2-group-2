@@ -5,7 +5,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 app = FastAPI()
 
 @app.get("/")
-async def root():
+async def index():
     return {"message": "Hello World"}
 
 
