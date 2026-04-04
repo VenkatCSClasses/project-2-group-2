@@ -17,3 +17,8 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
 @app.get("/logout")
 async def logout():
     return {"message": "Logged out"}
+
+
+@app.get("/posts")
+async def get_posts(start: int = 0, limit: int = 10):
+    return {"start": start, "limit": limit, "posts": []}
