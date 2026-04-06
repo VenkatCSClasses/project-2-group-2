@@ -20,3 +20,4 @@ build/
 *.tar.gz
 *.zip
 .env
+.ruff_cache/
