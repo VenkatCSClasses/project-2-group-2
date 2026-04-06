@@ -25,3 +25,15 @@ async def report_account(username: str):
     - **username**: The username of the account being reported.
     """
     return {"message": "Under construction"}
+
+
+@router.get("/search")
+async def search_accounts(query: str):
+    """
+    Search for user accounts.
+
+    This endpoint allows users to search for accounts based on a query string.
+
+    - **query**: The search query for finding user accounts.
+    """
+    return {"message": "Under construction", "query": query, "accounts": []}

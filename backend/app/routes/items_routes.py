@@ -41,4 +41,15 @@ async def review_item(item_id: str, form: ReviewForm = Depends()):
     return {"message": "Under construction"}
 
 
+@router.get("/search")
+async def search_items(query: str, category: str = None):
+    """
+    Search for food items.
+
+    This endpoint allows users to search for food items based on a query string and optional category filter.
+
+    - **query**: The search query for finding food items.
+    - **category**: The category to filter by (optional).
+    """
+    return {"message": "Under construction", "query": query, "category": category, "results": []}
 

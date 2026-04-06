@@ -74,3 +74,16 @@ async def delete_post(post_id: str):
     - **post_id**: The ID of the post to be deleted.
     """
     return {"message": "Under construction"}
+
+
+@router.get("/search")
+async def search_posts(query: str, category: str = None):
+    """
+    Search for posts.
+
+    This endpoint allows users to search for posts based on a query string and optional category filter.
+
+    - **query**: The search query for finding posts.
+    - **category**: The category to filter by (optional).
+    """
+    return {"message": "Under construction", "query": query, "category": category, "results": []}

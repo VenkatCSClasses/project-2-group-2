@@ -41,3 +41,14 @@ async def review_place(place_name: str, form: ReviewForm = Depends()):
     return {"message": "Under construction"}
 
 
+@router.get("/search")
+async def search_places(query: str, category: str = None):
+    """
+    Search for places (like dining halls).
+
+    This endpoint allows users to search for food places based on a query string and optional category filter.
+
+    - **query**: The search query for finding food places.
+    - **category**: The category to filter by (optional).
+    """
+    return {"message": "Under construction", "query": query, "category": category, "results": []}
