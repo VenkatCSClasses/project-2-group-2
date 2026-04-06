@@ -6,6 +6,14 @@ from typing import Annotated
 # This will be mounted at "/auth" in main.py, so all routes here will be prefixed with /auth
 router = APIRouter()
 
+@router.post("/")
+async def auth_root():
+    """
+    Authentication root endpoint.
+    """
+    return {"message": "Authentication endpoint"}
+
+
 @router.post("/login")
 async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
     """

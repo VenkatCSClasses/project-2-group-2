@@ -4,6 +4,20 @@ from app.schemas import UserRole
 # This will be mounted at "/account" in main.py, so all routes here will be prefixed with /account
 router = APIRouter()
 
+
+@router.get("/")
+async def get_accounts(start: int = 0, limit: int = 10):
+    """
+    Get a list of user accounts.
+
+    This endpoint retrieves a list of user accounts with pagination. 
+
+    - **start**: The starting index for pagination (default is 0).
+    - **limit**: The maximum number of accounts to return (default is 10).
+    """
+    return {"message": "Under construction", "start": start, "limit": limit, "accounts": []}
+    
+
 @router.get("/{username}")
 async def get_account(username: str):
     """
