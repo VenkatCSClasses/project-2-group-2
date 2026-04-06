@@ -16,7 +16,30 @@ async def get_accounts(start: int = 0, limit: int = 10):
     - **limit**: The maximum number of accounts to return (default is 10).
     """
     return {"message": "Under construction", "start": start, "limit": limit, "accounts": []}
+
+
+@router.get("/search")
+async def search_accounts(query: str):
+    """
+    Search for user accounts.
+
+    This endpoint allows users to search for accounts based on a query string.
+
+    - **query**: The search query for finding user accounts.
+    """
+    return {"message": "Under construction", "query": query, "accounts": []}
     
+
+@router.get("/reported")
+async def get_reported_accounts():
+    """
+    Get a list of reported user accounts.
+
+    This endpoint allows moderators to retrieve a list of user accounts that have been reported by users for review.
+
+    """
+    return {"message": "Under construction", "reported_accounts": []}
+
 
 @router.get("/{username}")
 async def get_account(username: str):
@@ -52,29 +75,6 @@ async def ban_account(username: str):
     - **username**: The username of the account to be banned.
     """
     return {"message": "Under construction"}
-
-
-@router.get("/reported")
-async def get_reported_accounts():
-    """
-    Get a list of reported user accounts.
-
-    This endpoint allows moderators to retrieve a list of user accounts that have been reported by users for review.
-
-    """
-    return {"message": "Under construction", "reported_accounts": []}
-
-
-@router.get("/search")
-async def search_accounts(query: str):
-    """
-    Search for user accounts.
-
-    This endpoint allows users to search for accounts based on a query string.
-
-    - **query**: The search query for finding user accounts.
-    """
-    return {"message": "Under construction", "query": query, "accounts": []}
 
 
 @router.post("/{username}/set-role")

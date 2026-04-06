@@ -16,6 +16,30 @@ async def get_posts(start: int = 0, limit: int = 10):
     return {"message": "Under construction", "start": start, "limit": limit, "posts": []}
 
 
+@router.get("/reported")
+async def get_reported_posts():
+    """
+    Get a list of reported posts.
+
+    This endpoint allows moderators to retrieve a list of posts that have been reported by users for review.
+
+    """
+    return {"message": "Under construction", "reported_posts": []}
+
+
+@router.get("/search")
+async def search_posts(query: str, category: str = None):
+    """
+    Search for posts.
+
+    This endpoint allows users to search for posts based on a query string and optional category filter.
+
+    - **query**: The search query for finding posts.
+    - **category**: The category to filter by (optional).
+    """
+    return {"message": "Under construction", "query": query, "category": category, "results": []}
+
+
 @router.get("/{post_id}")
 async def get_post(post_id: str):
     """
@@ -74,27 +98,3 @@ async def delete_post(post_id: str):
     - **post_id**: The ID of the post to be deleted.
     """
     return {"message": "Under construction"}
-
-
-@router.get("/reported")
-async def get_reported_posts():
-    """
-    Get a list of reported posts.
-
-    This endpoint allows moderators to retrieve a list of posts that have been reported by users for review.
-
-    """
-    return {"message": "Under construction", "reported_posts": []}
-
-
-@router.get("/search")
-async def search_posts(query: str, category: str = None):
-    """
-    Search for posts.
-
-    This endpoint allows users to search for posts based on a query string and optional category filter.
-
-    - **query**: The search query for finding posts.
-    - **category**: The category to filter by (optional).
-    """
-    return {"message": "Under construction", "query": query, "category": category, "results": []}
