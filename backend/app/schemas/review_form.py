@@ -1,7 +1,7 @@
 from fastapi import Form, UploadFile, File
 from typing import Optional
 
-class FoodReviewForm:
+class ReviewForm:
     def __init__(
         self,
         item_name: str = Form(...),
