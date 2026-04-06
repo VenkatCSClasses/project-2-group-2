@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 
 # This will be mounted at "/posts" in main.py, so all routes here will be prefixed with /posts
 router = APIRouter()
@@ -74,6 +74,17 @@ async def delete_post(post_id: str):
     - **post_id**: The ID of the post to be deleted.
     """
     return {"message": "Under construction"}
+
+
+@router.get("/reported")
+async def get_reported_posts():
+    """
+    Get a list of reported posts.
+
+    This endpoint allows moderators to retrieve a list of posts that have been reported by users for review.
+
+    """
+    return {"message": "Under construction", "reported_posts": []}
 
 
 @router.get("/search")
