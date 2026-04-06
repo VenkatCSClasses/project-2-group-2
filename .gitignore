@@ -1,5 +1,7 @@
 .venv/
-*.json
+cc_menu.json
+terrace_menu.json
+
 __pycache__/
 *.pyc
 *.pyo
