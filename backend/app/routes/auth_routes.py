@@ -37,7 +37,7 @@ def login_user(db, username: str, password_str: str):
         token = generate_token(user.id, user.role)
         refresh_token = generate_token(user.id, user.role, token_type="refresh")
         return token, refresh_token
-    except Exception as e:
+    except Exception:
         print(f"Error occurred while logging in user: {user.username}")
         raise ValueError("Invalid username or password")
 

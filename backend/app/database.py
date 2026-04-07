@@ -1,10 +1,11 @@
 import os
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from sqlalchemy import create_engine
+import valkey
 
 
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:gloorp@127.0.0.1:5432/food_db")
-
+cache = valkey.from_url(os.getenv("VALKEY_URL", "valkey://localhost:6379"))
 engine = create_engine(DATABASE_URL, echo=False)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

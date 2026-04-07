@@ -1,6 +1,5 @@
-from pydantic import BaseModel, EmailStr
-from typing import Annotated
-from fastapi import Form, Depends
+from pydantic import EmailStr
+from fastapi import Form
 
 
 class RegisterForm:

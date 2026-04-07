@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends
-from fastapi.security import OAuth2PasswordBearer
+from app.utils import get_current_user
 
 # This will be mounted at "/posts" in main.py, so all routes here will be prefixed with /posts
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 @router.get("/")
 async def get_posts(start: int = 0, limit: int = 10):
@@ -19,7 +18,7 @@ async def get_posts(start: int = 0, limit: int = 10):
 
 
 @router.get("/reported")
-async def get_reported_posts(token: str = Depends(oauth2_scheme)):
+async def get_reported_posts(token: str = Depends(get_current_user)):
     """
     Get a list of reported posts.
 
@@ -55,7 +54,7 @@ async def get_post(post_id: str):
 
 
 @router.post("/{post_id}/vote")
-async def vote_on_post(post_id: str, upvote: bool, token: str = Depends(oauth2_scheme)):
+async def vote_on_post(post_id: str, upvote: bool, token: str = Depends(get_current_user)):
     """
     Allows the user to upvote or downvote a post.
 
@@ -66,7 +65,7 @@ async def vote_on_post(post_id: str, upvote: bool, token: str = Depends(oauth2_s
 
 
 @router.post("/{post_id}/comment")
-async def comment_on_post(post_id: str, comment: str, token: str = Depends(oauth2_scheme)):
+async def comment_on_post(post_id: str, comment: str, token: str = Depends(get_current_user)):
     """
     Add a comment to a post.
 
@@ -79,7 +78,7 @@ async def comment_on_post(post_id: str, comment: str, token: str = Depends(oauth
 
 
 @router.post("/{post_id}/report")
-async def report_post(post_id: str, token: str = Depends(oauth2_scheme)):
+async def report_post(post_id: str, token: str = Depends(get_current_user)):
     """
     Report a post.
     
@@ -91,7 +90,7 @@ async def report_post(post_id: str, token: str = Depends(oauth2_scheme)):
 
 
 @router.post("/{post_id}/delete")
-async def delete_post(post_id: str, token: str = Depends(oauth2_scheme)):
+async def delete_post(post_id: str, token: str = Depends(get_current_user)):
     """
     Delete a post.
     

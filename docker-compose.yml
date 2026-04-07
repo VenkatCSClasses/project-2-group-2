@@ -24,6 +24,15 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql
 
+  valkey_cache:
+    image: valkey/valkey:latest
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - valkey_data:/data
+
 volumes:
   postgres_data:
   venv:
+  valkey_data:

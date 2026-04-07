@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends
 from app.schemas import ReviewForm
-from fastapi.security import OAuth2PasswordBearer
+from app.utils import get_current_user
 
 # This will be mounted at "/items" in main.py, so all routes here will be prefixed with /items
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 @router.get("/")
 async def get_items(start: int = 0, limit: int = 10):
@@ -45,7 +44,7 @@ async def get_item(item_id: str):
 
 
 @router.post("/{item_id}/review")
-async def review_item(item_id: str, form: ReviewForm = Depends(), token: str = Depends(oauth2_scheme)):
+async def review_item(item_id: str, form: ReviewForm = Depends(), token: str = Depends(get_current_user)):
     """
     Submit a review for a food item.
 

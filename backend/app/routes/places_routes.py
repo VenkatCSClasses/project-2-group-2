@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends
 from app.schemas import ReviewForm
-from fastapi.security import OAuth2PasswordBearer
+from app.utils import get_current_user
 
 # This will be mounted at "/places" in main.py, so all routes here will be prefixed with /places
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
 @router.get("/")
@@ -46,7 +45,7 @@ async def get_place(place_name: str):
 
 
 @router.post("/{place_name}/review")
-async def review_place(place_name: str, form: ReviewForm = Depends(), token: str = Depends(oauth2_scheme)):
+async def review_place(place_name: str, form: ReviewForm = Depends(), token: str = Depends(get_current_user)):
     """
     Submit a review for a place (like a dining hall).
 
