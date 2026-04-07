@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 from app.schemas import ReviewForm
+from app.utils import get_current_user
 
 # This will be mounted at "/items" in main.py, so all routes here will be prefixed with /items
 router = APIRouter()
@@ -43,7 +44,7 @@ async def get_item(item_id: str):
 
 
 @router.post("/{item_id}/review")
-async def review_item(item_id: str, form: ReviewForm = Depends()):
+async def review_item(item_id: str, form: ReviewForm = Depends(), current_user: dict = Depends(get_current_user)):
     """
     Submit a review for a food item.
 

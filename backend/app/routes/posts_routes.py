@@ -1,4 +1,5 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from app.utils import get_current_user
 
 # This will be mounted at "/posts" in main.py, so all routes here will be prefixed with /posts
 router = APIRouter()
@@ -17,7 +18,7 @@ async def get_posts(start: int = 0, limit: int = 10):
 
 
 @router.get("/reported")
-async def get_reported_posts():
+async def get_reported_posts(current_user: dict = Depends(get_current_user)):
     """
     Get a list of reported posts.
 
@@ -53,7 +54,7 @@ async def get_post(post_id: str):
 
 
 @router.post("/{post_id}/vote")
-async def vote_on_post(post_id: str, upvote: bool):
+async def vote_on_post(post_id: str, upvote: bool, current_user: dict = Depends(get_current_user)):
     """
     Allows the user to upvote or downvote a post.
 
@@ -64,7 +65,7 @@ async def vote_on_post(post_id: str, upvote: bool):
 
 
 @router.post("/{post_id}/comment")
-async def comment_on_post(post_id: str, comment: str):
+async def comment_on_post(post_id: str, comment: str, current_user: dict = Depends(get_current_user)):
     """
     Add a comment to a post.
 
@@ -77,7 +78,7 @@ async def comment_on_post(post_id: str, comment: str):
 
 
 @router.post("/{post_id}/report")
-async def report_post(post_id: str):
+async def report_post(post_id: str, current_user: dict = Depends(get_current_user)):
     """
     Report a post.
     
@@ -89,7 +90,7 @@ async def report_post(post_id: str):
 
 
 @router.post("/{post_id}/delete")
-async def delete_post(post_id: str):
+async def delete_post(post_id: str, current_user: dict = Depends(get_current_user)):
     """
     Delete a post.
     
