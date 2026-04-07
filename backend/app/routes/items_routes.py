@@ -44,7 +44,7 @@ async def get_item(item_id: str):
 
 
 @router.post("/{item_id}/review")
-async def review_item(item_id: str, form: ReviewForm = Depends(), token: str = Depends(get_current_user)):
+async def review_item(item_id: str, form: ReviewForm = Depends(), current_user: dict = Depends(get_current_user)):
     """
     Submit a review for a food item.
 

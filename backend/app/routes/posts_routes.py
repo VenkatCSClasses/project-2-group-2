@@ -18,7 +18,7 @@ async def get_posts(start: int = 0, limit: int = 10):
 
 
 @router.get("/reported")
-async def get_reported_posts(token: str = Depends(get_current_user)):
+async def get_reported_posts(current_user: dict = Depends(get_current_user)):
     """
     Get a list of reported posts.
 
@@ -54,7 +54,7 @@ async def get_post(post_id: str):
 
 
 @router.post("/{post_id}/vote")
-async def vote_on_post(post_id: str, upvote: bool, token: str = Depends(get_current_user)):
+async def vote_on_post(post_id: str, upvote: bool, current_user: dict = Depends(get_current_user)):
     """
     Allows the user to upvote or downvote a post.
 
@@ -65,7 +65,7 @@ async def vote_on_post(post_id: str, upvote: bool, token: str = Depends(get_curr
 
 
 @router.post("/{post_id}/comment")
-async def comment_on_post(post_id: str, comment: str, token: str = Depends(get_current_user)):
+async def comment_on_post(post_id: str, comment: str, current_user: dict = Depends(get_current_user)):
     """
     Add a comment to a post.
 
@@ -78,7 +78,7 @@ async def comment_on_post(post_id: str, comment: str, token: str = Depends(get_c
 
 
 @router.post("/{post_id}/report")
-async def report_post(post_id: str, token: str = Depends(get_current_user)):
+async def report_post(post_id: str, current_user: dict = Depends(get_current_user)):
     """
     Report a post.
     
@@ -90,7 +90,7 @@ async def report_post(post_id: str, token: str = Depends(get_current_user)):
 
 
 @router.post("/{post_id}/delete")
-async def delete_post(post_id: str, token: str = Depends(get_current_user)):
+async def delete_post(post_id: str, current_user: dict = Depends(get_current_user)):
     """
     Delete a post.
     

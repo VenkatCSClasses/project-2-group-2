@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timedelta
 from fastapi import APIRouter
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
@@ -17,9 +18,9 @@ ph = PasswordHasher()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
-def generate_token(user_id: int, role: UserRole):
-    payload = {"user_id": user_id, "role": role.value}
-    payload["exp"] = int((jwt.datetime.datetime.utcnow() + jwt.timedelta(hours=24)).timestamp())
+def generate_token(user_id: int, role: UserRole, token_type: str = "access"):
+    payload = {"user_id": user_id, "role": role.value, "token_type": token_type}
+    payload["exp"] = int((datetime.utcnow() + timedelta(hours=24)).timestamp())
     print(f"Generating token for user: {user_id}, role: {role.value}")
     token = jwt.encode(payload, os.getenv("JWT_SECRET", "very_secret_key_that_has_no_flaws"), algorithm="HS256")
     return token

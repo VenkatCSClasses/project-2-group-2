@@ -31,7 +31,7 @@ async def search_accounts(query: str):
     
 
 @router.get("/reported")
-async def get_reported_accounts(token: str = Depends(get_current_user)):
+async def get_reported_accounts(current_user: dict = Depends(get_current_user)):
     """
     Get a list of reported user accounts.
 
@@ -42,7 +42,7 @@ async def get_reported_accounts(token: str = Depends(get_current_user)):
 
 
 @router.get("/{username}")
-async def get_account(username: str, token: str = Depends(get_current_user)):
+async def get_account(username: str):
     """
     Get account information for a user.
 
@@ -54,7 +54,7 @@ async def get_account(username: str, token: str = Depends(get_current_user)):
 
 
 @router.post("/{username}/report")
-async def report_account(username: str, token: str = Depends(get_current_user)):
+async def report_account(username: str, current_user: dict = Depends(get_current_user)):
     """
     Report a user account.
     
@@ -66,7 +66,7 @@ async def report_account(username: str, token: str = Depends(get_current_user)):
 
 
 @router.post("/{username}/ban")
-async def ban_account(username: str, token: str = Depends(get_current_user)):
+async def ban_account(username: str, current_user: dict = Depends(get_current_user)):
     """
     Ban a user account.
 
@@ -78,7 +78,7 @@ async def ban_account(username: str, token: str = Depends(get_current_user)):
 
 
 @router.post("/{username}/set-role")
-async def change_account_role(username: str, role: UserRole = UserRole.USER, token: str = Depends(get_current_user)):
+async def change_account_role(username: str, role: UserRole = UserRole.USER, current_user: dict = Depends(get_current_user)):
     """
     Change the role of a user account.
 

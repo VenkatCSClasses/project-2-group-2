@@ -45,7 +45,7 @@ async def get_place(place_name: str):
 
 
 @router.post("/{place_name}/review")
-async def review_place(place_name: str, form: ReviewForm = Depends(), token: str = Depends(get_current_user)):
+async def review_place(place_name: str, form: ReviewForm = Depends(), current_user: dict = Depends(get_current_user)):
     """
     Submit a review for a place (like a dining hall).
 
