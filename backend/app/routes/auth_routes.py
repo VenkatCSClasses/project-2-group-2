@@ -9,7 +9,7 @@ from app.models import User
 from argon2 import PasswordHasher
 import jwt
 from app.schemas import RegisterForm, UserRole
-from sqlalchemy.orm import Session
+from sqlmodel import Session, select
 
 # This will be mounted at "/auth" in main.py, so all routes here will be prefixed with /auth
 router = APIRouter()
@@ -28,7 +28,7 @@ def generate_token(user_id: int, role: UserRole, token_type: str = "access"):
 
 def login_user(db, username: str, password_str: str):
     # Find the user
-    user = db.query(User).filter(User.username == username).first()
+    user = db.exec(select(User).where(User.username == username)).first()
     if user is None:
         raise ValueError("Invalid username or password")
     
@@ -45,7 +45,7 @@ def login_user(db, username: str, password_str: str):
 
 def register_user(db, username: str, password_str: str, email: str):
     # Check if the username is already taken
-    existing_user = db.query(User).filter(User.username == username).first()
+    existing_user = db.exec(select(User).where(User.username == username)).first()
     if existing_user:
         raise ValueError("Username already taken")
     
