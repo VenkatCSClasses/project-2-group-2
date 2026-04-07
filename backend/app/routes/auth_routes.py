@@ -25,15 +25,6 @@ def generate_token(user_id: int, role: UserRole):
     return token
 
 
-def verify_token(token: str):
-    try:
-        payload = jwt.decode(token, os.getenv("JWT_SECRET", "very_secret_key_that_has_no_flaws"), algorithms=["HS256"])
-        return payload
-    except jwt.ExpiredSignatureError:
-        raise ValueError("Token has expired")
-    except jwt.InvalidTokenError:
-        raise ValueError("Invalid token")
-
 def login_user(db, username: str, password_str: str):
     # Find the user
     user = db.query(User).filter(User.username == username).first()
@@ -113,6 +104,10 @@ async def register(form_data: Annotated[RegisterForm, Depends()], db: Session = 
     """
     try:
         token = register_user(db, form_data.username, form_data.password, form_data.email)
-        return {"message": "User registered successfully", "access_token": token, "token_type": "bearer"}
+        return {
+            "message": "User registered successfully", 
+            "access_token": token, 
+            "token_type": "bearer"
+        }
     except ValueError as e:
         return {"message": str(e)}, 400

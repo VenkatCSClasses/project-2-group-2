@@ -1,9 +1,10 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from app.schemas import UserRole
+from fastapi.security import OAuth2PasswordBearer
 
 # This will be mounted at "/account" in main.py, so all routes here will be prefixed with /account
 router = APIRouter()
-
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 @router.get("/")
 async def get_accounts(start: int = 0, limit: int = 10):
@@ -31,7 +32,7 @@ async def search_accounts(query: str):
     
 
 @router.get("/reported")
-async def get_reported_accounts():
+async def get_reported_accounts(token: str = Depends(oauth2_scheme)):
     """
     Get a list of reported user accounts.
 
@@ -42,7 +43,7 @@ async def get_reported_accounts():
 
 
 @router.get("/{username}")
-async def get_account(username: str):
+async def get_account(username: str, token: str = Depends(oauth2_scheme)):
     """
     Get account information for a user.
 
@@ -54,7 +55,7 @@ async def get_account(username: str):
 
 
 @router.post("/{username}/report")
-async def report_account(username: str):
+async def report_account(username: str, token: str = Depends(oauth2_scheme)):
     """
     Report a user account.
     
@@ -66,7 +67,7 @@ async def report_account(username: str):
 
 
 @router.post("/{username}/ban")
-async def ban_account(username: str):
+async def ban_account(username: str, token: str = Depends(oauth2_scheme)):
     """
     Ban a user account.
 
@@ -78,7 +79,7 @@ async def ban_account(username: str):
 
 
 @router.post("/{username}/set-role")
-async def change_account_role(username: str, role: UserRole = UserRole.USER):
+async def change_account_role(username: str, role: UserRole = UserRole.USER, token: str = Depends(oauth2_scheme)):
     """
     Change the role of a user account.
 
