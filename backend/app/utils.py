@@ -55,3 +55,35 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+def get_current_moderator(current_user: dict = Depends(get_current_user)):
+    """
+    Dependency to ensure the current user is a moderator.
+
+    current_user: The current user information obtained from the JWT token.
+
+    returns: The current user information if the user is a moderator, otherwise raises an HTTPException.
+    """
+    if current_user["role"] != "moderator" and current_user["role"] != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to perform this action"
+        )
+    return current_user
+
+
+def get_current_admin(current_user: dict = Depends(get_current_user)):
+    """
+    Dependency to ensure the current user is an admin.
+
+    current_user: The current user information obtained from the JWT token.
+
+    returns: The current user information if the user is an admin, otherwise raises an HTTPException.
+    """
+    if current_user["role"] != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to perform this action"
+        )
+    return current_user

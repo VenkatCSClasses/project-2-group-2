@@ -1,12 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
-from app.schemas import ReviewForm
-from app.utils import get_current_user
+from app.schemas import ReviewForm, FoodItemCreateForm
+from app.utils import get_current_user, get_current_admin
 from app.database import get_db
 from sqlmodel import Session
-from app.models import FoodItem
+from app.models import FoodItem, Review, User
 from uuid import UUID
 from sqlalchemy import or_
-
 
 # This will be mounted at "/items" in main.py, so all routes here will be prefixed with /items
 router = APIRouter()
@@ -48,6 +47,23 @@ async def search_items(query: str, db: Session = Depends(get_db)):
     return {"query": query, "results": results, "count": len(results)}
 
 
+@router.post("/create")
+async def create_item(item: FoodItemCreateForm = Depends(), db: Session = Depends(get_db), current_admin: dict = Depends(get_current_admin)):
+    """
+    Create a new food item.
+
+    - **item**: The food item data to create.
+    """
+    if db.query(FoodItem).filter(FoodItem.name == item.name).first():
+        raise HTTPException(status_code=400, detail="Item with this name already exists")
+
+    new_item = FoodItem(name=item.name, description=item.description)
+    db.add(new_item)
+    db.commit()
+    db.refresh(new_item)
+    return {"message": "Item created successfully", "item": new_item}
+
+
 @router.get("/{item_id}")
 async def get_item(item_id: str, db: Session = Depends(get_db)):
     """
@@ -68,8 +84,9 @@ async def get_item(item_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Item not found")
     return {"item_id": item_id, "item_info": item}
 
+
 @router.post("/{item_id}/review")
-async def review_item(item_id: str, form: ReviewForm = Depends(), current_user: dict = Depends(get_current_user)):
+async def review_item(item_id: str, form: ReviewForm = Depends(), current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """
     Submit a review for a food item.
 
@@ -77,5 +94,24 @@ async def review_item(item_id: str, form: ReviewForm = Depends(), current_user: 
     - **form**: The review form data.
 
     """
-    return {"message": "Under construction"}
+
+    item = db.query(FoodItem).get(item_id)  # Check if item exists
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    user = db.query(User).get(current_user["id"])  # Check if user exists
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    review = Review(
+        item_id=item_id,
+        user_id=user.id,
+        rating=form.rating,
+        comment=form.comment
+    )
+    db.add(review)
+    db.commit()
+    db.refresh(review)
+
+    return {"message": "Review submitted successfully", "review": review}
 
