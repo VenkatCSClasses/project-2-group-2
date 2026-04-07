@@ -6,6 +6,7 @@ from fastapi import Depends, HTTPException, status
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
+
 def get_current_user(token: str = Depends(oauth2_scheme)):
     """
     Get user info from the JWT token, also invalidate the token if the user is banned in the Valkey cache.
