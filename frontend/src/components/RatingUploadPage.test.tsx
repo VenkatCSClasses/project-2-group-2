@@ -38,3 +38,29 @@ test('allows the user to type into form fields', async () => {
   expect(ratingInput).toHaveValue(5)
   expect(descriptionInput).toHaveValue('Pretty good')
 })
+
+test('shows validation errors for empty required fields', async () => {
+  const user = userEvent.setup()
+  render(<RatingUploadPage />)
+
+  await user.click(screen.getByRole('button', { name: /submit/i }))
+
+  expect(screen.getByText(/item id is required/i)).toBeInTheDocument()
+  expect(screen.getByText(/item name is required/i)).toBeInTheDocument()
+  expect(screen.getByText(/dining hall is required/i)).toBeInTheDocument()
+  expect(screen.getByText(/rating is required/i)).toBeInTheDocument()
+})
+
+test('shows validation error if rating is outside 1 to 5', async () => {
+  const user = userEvent.setup()
+  render(<RatingUploadPage />)
+
+  await user.type(screen.getByLabelText(/item id/i), '123')
+  await user.type(screen.getByLabelText(/item name/i), 'Pizza')
+  await user.type(screen.getByLabelText(/dining hall/i), 'RPCC')
+  await user.type(screen.getByLabelText(/rating/i), '6')
+
+  await user.click(screen.getByRole('button', { name: /submit/i }))
+
+  expect(screen.getByText(/rating must be between 1 and 5/i)).toBeInTheDocument()
+})
