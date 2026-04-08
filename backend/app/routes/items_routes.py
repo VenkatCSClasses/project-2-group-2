@@ -108,15 +108,19 @@ async def review_item(item_id: str, form: ReviewForm = Depends(), current_user: 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    review = Review(
-        food_item=item,
-        user=user,
-        star_rating=form.rating,
-        content=form.description,
-    )
-    db.add(review)
-    db.commit()
-    db.refresh(review)
+    try:
+        review = Review(
+            food_item=item,
+            user=user,
+            star_rating=form.rating,
+            content=form.description,
+        )
+        db.add(review)
+        db.commit()
+        db.refresh(review)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error submitting review") from e
 
     return {"message": "Review submitted successfully", "review": review}
 
