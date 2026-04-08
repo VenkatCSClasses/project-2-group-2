@@ -95,6 +95,11 @@ async def review_item(item_id: str, form: ReviewForm = Depends(), current_user: 
 
     """
 
+    try:
+        item_id = UUID(item_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid UUID format")
+
     item = db.query(FoodItem).get(item_id)  # Check if item exists
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -115,3 +120,33 @@ async def review_item(item_id: str, form: ReviewForm = Depends(), current_user: 
 
     return {"message": "Review submitted successfully", "review": review}
 
+
+@router.get("/{item_id}/reviews")
+async def get_item_reviews(item_id: str, start: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+    """
+    Get reviews for a food item.
+
+    This endpoint retrieves all reviews for a specific food item.
+
+    - **item_id**: The ID of the item to retrieve reviews for.
+    """
+
+    if limit > 100:
+        limit = 100  # Cap the limit to prevent abuse
+    if limit < 1:
+        limit = 10  # Default to 10 if an invalid limit is provided
+    if start < 0:
+        start = 0  # Default to 0 if an invalid start is provided
+
+
+    try:
+        item_id = UUID(item_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid UUID format")
+        
+    item = db.query(FoodItem).get(item_id)  # Check if item exists
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    reviews = db.query(Review).filter(Review.food_item_id == item_id).offset(start).limit(limit).all()
+    return {"item_id": item_id, "reviews": reviews, "count": len(reviews)}
