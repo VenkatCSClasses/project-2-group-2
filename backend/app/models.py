@@ -95,7 +95,7 @@ class Comment(SQLModel, table=True):
         back_populates="replies", 
         sa_relationship_kwargs=dict(remote_side="Comment.id")
     )
-    replies: List["Comment"] = Relationship(back_populates="parent")
+    replies: List["Comment"] = Relationship(back_populates="parent", cascade_delete=True)
 
     def __repr__(self):
         return f"<Comment(id={self.id}, author_id={self.author_id}, review_id={self.review_id}, text='{self.text}')>"
