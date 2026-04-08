@@ -1,4 +1,7 @@
 from fastapi import APIRouter, Depends
+from sqlmodel import Session, select
+from app.database import get_db
+from app.models import User
 from app.schemas import UserRole
 from app.utils import get_current_user, get_current_admin, get_current_moderator
 
@@ -6,7 +9,7 @@ from app.utils import get_current_user, get_current_admin, get_current_moderator
 router = APIRouter()
 
 @router.get("/")
-async def get_accounts(start: int = 0, limit: int = 10):
+async def get_accounts(start: int = 0, limit: int = 10, db: Session = Depends(get_db)):
     """
     Get a list of user accounts.
 
@@ -15,11 +18,20 @@ async def get_accounts(start: int = 0, limit: int = 10):
     - **start**: The starting index for pagination (default is 0).
     - **limit**: The maximum number of accounts to return (default is 10).
     """
-    return {"message": "Under construction", "start": start, "limit": limit, "accounts": []}
+    users = db.exec(select(User).offset(start).limit(limit)).all()
+    return {
+        "message": "Accounts retrieved successfully",
+        "start": start,
+        "limit": limit,
+        "accounts": [
+            {"username": user.username, "email": user.email, "role": user.role.value}
+            for user in users
+        ],
+    }
 
 
 @router.get("/search")
-async def search_accounts(query: str):
+async def search_accounts(query: str, db: Session = Depends(get_db)):
     """
     Search for user accounts.
 
@@ -27,7 +39,15 @@ async def search_accounts(query: str):
 
     - **query**: The search query for finding user accounts.
     """
-    return {"message": "Under construction", "query": query, "accounts": []}
+    users = db.exec(select(User).where(User.username.contains(query))).all()
+    return {
+        "message": "Search completed successfully",
+        "query": query,
+        "accounts": [
+            {"username": user.username, "email": user.email, "role": user.role.value}
+            for user in users
+        ],
+    }
     
 
 @router.get("/reported")
