@@ -61,6 +61,22 @@ async def search_places(query: str, category: str = None, db: Session = Depends(
     return {"query": query, "category": category, "results": results, "count": len(results)}
 
 
+@router.post("/create")
+async def create_place(place: FoodPlaceCreateForm = Depends(), db: Session = Depends(get_db), current_admin: dict = Depends(get_current_admin)):
+    """
+    Create a new food place.
+    - **place**: The food place data to create.
+    """
+    if db.query(FoodPlace).filter(FoodPlace.name == place.name).first():
+        raise HTTPException(status_code=400, detail="Place with this name already exists")
+
+    new_place = FoodPlace(name=place.name, description=place.description)
+    db.add(new_place)
+    db.commit()
+    db.refresh(new_place)
+    return {"message": "Place created successfully", "place": new_place}
+
+
 @router.get("/{place_name}")
 async def get_place(place_name: str, db: Session = Depends(get_db)):
     """
