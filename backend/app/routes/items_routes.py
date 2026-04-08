@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.schemas import ReviewForm, FoodItemCreateForm
 from app.utils import get_current_user, get_current_admin
+from app.routes.helpers import get_or_404
 from app.database import get_db
 from sqlmodel import Session
 from app.models import FoodItem, Review, User
@@ -15,7 +16,7 @@ async def get_items(start: int = 0, limit: int = 10, db: Session = Depends(get_d
     """
     Get a list of food items.
 
-    This endpoint retrieves a list of food items with pagination. 
+    This endpoint retrieves a list of food items with pagination.
 
     - **start**: The starting index for pagination (default is 0).
     - **limit**: The maximum number of items to return (default is 10).
@@ -79,9 +80,8 @@ async def get_item(item_id: str, db: Session = Depends(get_db)):
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid UUID format")
 
-    item = db.query(FoodItem).get(item_id)
-    if not item:
-        raise HTTPException(status_code=404, detail="Item not found")
+    item = get_or_404(db, FoodItem, item_id)
+
     return {"item_id": item_id.value, "item_info": item}
 
 
@@ -100,13 +100,8 @@ async def review_item(item_id: str, form: ReviewForm = Depends(), current_user: 
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid UUID format")
 
-    item = db.query(FoodItem).get(item_id)  # Check if item exists
-    if not item:
-        raise HTTPException(status_code=404, detail="Item not found")
-
-    user = db.query(User).get(current_user["user_id"])  # Check if user exists
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    item = get_or_404(db, FoodItem, item_id)
+    user = get_or_404(db, User, current_user["user_id"])
 
     review = Review(
         food_item=item,
@@ -139,14 +134,9 @@ async def get_item_reviews(item_id: str, start: int = 0, limit: int = 10, db: Se
         start = 0  # Default to 0 if an invalid start is provided
 
 
-    try:
-        item_id = UUID(item_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid UUID format")
-        
-    item = db.query(FoodItem).get(item_id)  # Check if item exists
-    if not item:
-        raise HTTPException(status_code=404, detail="Item not found")
+    item_id = parse_uuid(item_id)
+
+    item = get_or_404(db, FoodItem, item_id)
 
     reviews = db.query(Review).filter(Review.food_item_id == item_id).offset(start).limit(limit).all()
     return {"item_id": item_id, "reviews": reviews, "count": len(reviews)}
