@@ -46,7 +46,7 @@ class Review(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     author_id: UUID = Field(foreign_key="users.id")
     food_item_id: Optional[UUID] = Field(default=None, foreign_key="food_items.id")
-    star_rating: int = Field(le=10, ge=0, index=True)  # 0-10 (each int represents a half star, so 10 = 5 stars, 9 = 4.5 stars, etc)
+    star_rating: int = Field(le=10, ge=1, index=True)  # 1-10 (each int represents a half star, so 10 = 5 stars, 9 = 4.5 stars, etc)
     content: Optional[str] = Field(default=None)
     image_url: Optional[str] = Field(default=None)
     

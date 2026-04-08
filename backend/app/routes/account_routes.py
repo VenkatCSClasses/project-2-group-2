@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from app.schemas import UserRole
-from app.utils import get_current_user
+from app.utils import get_current_user, get_current_admin, get_current_moderator
 
 # This will be mounted at "/account" in main.py, so all routes here will be prefixed with /account
 router = APIRouter()
@@ -66,7 +66,7 @@ async def report_account(username: str, current_user: dict = Depends(get_current
 
 
 @router.post("/{username}/ban")
-async def ban_account(username: str, current_user: dict = Depends(get_current_user)):
+async def ban_account(username: str, current_moderator: dict = Depends(get_current_moderator)):
     """
     Ban a user account.
 
@@ -78,7 +78,7 @@ async def ban_account(username: str, current_user: dict = Depends(get_current_us
 
 
 @router.post("/{username}/set-role")
-async def change_account_role(username: str, role: UserRole = UserRole.USER, current_user: dict = Depends(get_current_user)):
+async def change_account_role(username: str, role: UserRole = UserRole.USER, current_admin: dict = Depends(get_current_admin)):
     """
     Change the role of a user account.
 

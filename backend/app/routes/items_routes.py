@@ -82,7 +82,7 @@ async def get_item(item_id: str, db: Session = Depends(get_db)):
     item = db.query(FoodItem).get(item_id)
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
-    return {"item_id": item_id, "item_info": item}
+    return {"item_id": item_id.value, "item_info": item}
 
 
 @router.post("/{item_id}/review")
@@ -99,15 +99,15 @@ async def review_item(item_id: str, form: ReviewForm = Depends(), current_user: 
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    user = db.query(User).get(current_user["id"])  # Check if user exists
+    user = db.query(User).get(current_user["user_id"])  # Check if user exists
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     review = Review(
-        item_id=item_id,
-        user_id=user.id,
-        rating=form.rating,
-        comment=form.comment
+        food_item=item,
+        user=user,
+        star_rating=form.rating,
+        content=form.description,
     )
     db.add(review)
     db.commit()

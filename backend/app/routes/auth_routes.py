@@ -18,8 +18,8 @@ ph = PasswordHasher()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
-def generate_token(user_id: int, role: UserRole, token_type: str = "access"):
-    payload = {"user_id": user_id, "role": role.value, "token_type": token_type}
+def generate_token(user_id: str, role: UserRole, token_type: str = "access"):
+    payload = {"user_id": str(user_id), "role": role.value, "token_type": token_type}
     payload["exp"] = int((datetime.utcnow() + timedelta(hours=24)).timestamp())
     print(f"Generating token for user: {user_id}, role: {role.value}")
     token = jwt.encode(payload, os.getenv("JWT_SECRET", "very_secret_key_that_has_no_flaws"), algorithm="HS256")
@@ -35,8 +35,8 @@ def login_user(db, username: str, password_str: str):
     try:
         ph.verify(user.password_hash, password_str)
         print(f"User logged in: {user.username}")
-        token = generate_token(user.id, user.role)
-        refresh_token = generate_token(user.id, user.role, token_type="refresh")
+        token = generate_token(str(user.id), user.role)
+        refresh_token = generate_token(str(user.id), user.role, token_type="refresh")
         return token, refresh_token
     except Exception:
         print(f"Error occurred while logging in user: {user.username}")
