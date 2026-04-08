@@ -10,15 +10,7 @@ from app.utils import get_current_user
 
 router = APIRouter()
 
-
-def validate_comment_text(comment: str) -> str:
-    comment_text = strip(comment)
-    if not comment_text:
-        raise HTTPException(status_code=400, detail="Comment cannot be empty")
-    return comment_text
-
-
-def get_parent_comment(db: Session, review: Review, parent_id: str | None) -> Comment | None:
+def validate_parent_comment(db: Session, review: Review, parent_id: str | None) -> Comment | None:
     if not parent_id:
         return None
 
@@ -50,8 +42,8 @@ async def comment_on_post(
     post = get_or_404(db, Review, post_id)
     user = get_or_404(db, User, current_user["user_id"])
 
-    comment_text = validate_comment_text(comment)
-    parent = get_parent_comment(db, post, parent_id)
+    comment_text = strip(comment, "Comment cannot be empty")
+    parent = validate_parent_comment(db, post, parent_id)
 
     new_comment = Comment(
         text=comment_text,

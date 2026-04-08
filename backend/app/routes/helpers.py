@@ -14,11 +14,13 @@ def parse_uuid(value: str) -> UUID:
         raise HTTPException(status_code=400, detail="Invalid UUID format")
 
 
-def strip(value: str | None) -> str | None:
+def strip(value: str | None, detail: str | None = None) -> str | None:
     if not value:
         return None
     value = value.strip()
-    return value or None
+    if not value:
+        raise HTTPException(status_code=400, detail=detail or "Value cannot be empty")
+    return value
 
 
 def get_or_404(db: Session, model: type[T], id: UUID) -> T:
