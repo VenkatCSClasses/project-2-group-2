@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
-from app.database import get_db
+
+from app.database import cache, get_db
 from app.models import User
 from app.schemas import UserRole
 from app.utils import get_current_user, get_current_admin, get_current_moderator
@@ -51,18 +52,34 @@ async def search_accounts(query: str, db: Session = Depends(get_db)):
     
 
 @router.get("/reported")
-async def get_reported_accounts(current_user: dict = Depends(get_current_user)):
+async def get_reported_accounts(current_user: dict = Depends(get_current_moderator), db: Session = Depends(get_db)):
     """
     Get a list of reported user accounts.
 
     This endpoint allows moderators to retrieve a list of user accounts that have been reported by users for review.
 
     """
-    return {"message": "Under construction", "reported_accounts": []}
+    reported_usernames = [
+        username.decode() if isinstance(username, bytes) else username
+        for username in cache.smembers("reported_users")
+    ]
+    reported_accounts = []
+
+    for username in reported_usernames:
+        user = db.exec(select(User).where(User.username == username)).first()
+        if user is not None:
+            reported_accounts.append(
+                {"username": user.username, "email": user.email, "role": user.role.value}
+            )
+
+    return {
+        "message": "Reported accounts retrieved successfully",
+        "reported_accounts": reported_accounts,
+    }
 
 
 @router.get("/{username}")
-async def get_account(username: str):
+async def get_account(username: str, db: Session = Depends(get_db)):
     """
     Get account information for a user.
 
@@ -70,7 +87,15 @@ async def get_account(username: str):
 
     - **username**: The username of the account to retrieve.
     """
-    return {"message": "Under construction", "username": username, "account_info": {}}
+    user = db.exec(select(User).where(User.username == username)).first()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
+
+    return {
+        "message": "Account retrieved successfully",
+        "username": username,
+        "account_info": {"email": user.email, "role": user.role.value},
+    }
 
 
 @router.post("/{username}/report")
@@ -82,11 +107,12 @@ async def report_account(username: str, current_user: dict = Depends(get_current
 
     - **username**: The username of the account being reported.
     """
-    return {"message": "Under construction"}
+    cache.sadd("reported_users", username)
+    return {"message": f"Account '{username}' reported successfully"}
 
 
 @router.post("/{username}/ban")
-async def ban_account(username: str, current_moderator: dict = Depends(get_current_moderator)):
+async def ban_account(username: str, current_moderator: dict = Depends(get_current_moderator), db: Session = Depends(get_db)):
     """
     Ban a user account.
 
@@ -94,11 +120,19 @@ async def ban_account(username: str, current_moderator: dict = Depends(get_curre
 
     - **username**: The username of the account to be banned.
     """
-    return {"message": "Under construction"}
+    user = db.exec(select(User).where(User.username == username)).first()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Account not found",
+        )
+
+    cache.sadd("banned_users", str(user.id))
+    return {"message": f"Account '{username}' banned successfully"}
 
 
 @router.post("/{username}/set-role")
-async def change_account_role(username: str, role: UserRole = UserRole.USER, current_admin: dict = Depends(get_current_admin)):
+async def change_account_role(username: str, role: UserRole = UserRole.USER, current_admin: dict = Depends(get_current_admin), db: Session = Depends(get_db)):
     """
     Change the role of a user account.
 
@@ -107,4 +141,17 @@ async def change_account_role(username: str, role: UserRole = UserRole.USER, cur
     - **username**: The username of the account to have their role changed.
     - **role**: The new role to assign to the user account.
     """
-    return {"message": "Under construction"}
+    user = db.exec(select(User).where(User.username == username)).first()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
+
+    user.role = role
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return {
+        "message": f"Role updated successfully for '{username}'",
+        "username": username,
+        "role": user.role.value,
+    }
