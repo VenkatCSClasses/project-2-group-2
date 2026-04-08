@@ -1,5 +1,3 @@
-from uuid import UUID
-
 from fastapi import APIRouter, Depends
 from sqlmodel import Session
 
@@ -10,7 +8,6 @@ from app.utils import get_current_user
 
 
 router = APIRouter()
-
 
 @router.post("/{post_id}/vote")
 async def vote_on_post(post_id: str, upvote: bool, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):

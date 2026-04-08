@@ -1,5 +1,3 @@
-from uuid import UUID
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
@@ -12,7 +10,6 @@ from app.utils import get_current_user
 
 router = APIRouter()
 
-
 @router.post("/{post_id}/comment")
 async def comment_on_post(post_id: str, comment: str, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """
@@ -23,9 +20,9 @@ async def comment_on_post(post_id: str, comment: str, current_user: dict = Depen
     """
     post_id = parse_uuid(post_id)
     post = get_or_404(db, Review, post_id)
-    user = get_or_404(db, User, UUID(current_user["user_id"]))
+    user = get_or_404(db, User, current_user["user_id"])
 
-    comment_text = comment.strip()
+    comment_text = strip(comment)
     if not comment_text:
         raise HTTPException(status_code=400, detail="Comment cannot be empty")
 
@@ -46,7 +43,7 @@ async def report_comment(comment_id: str, reason: str = None, current_user: dict
     """
     comment_id = parse_uuid(comment_id)
     comment = get_or_404(db, Comment, comment_id)
-    user = get_or_404(db, User, UUID(current_user["user_id"]))
+    user = get_or_404(db, User, current_user["user_id"])
 
     report = db.query(Report).filter(
         Report.comment_id == comment.id,

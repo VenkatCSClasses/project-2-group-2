@@ -1,5 +1,3 @@
-from uuid import UUID
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import or_
 from sqlmodel import Session
@@ -75,7 +73,7 @@ async def get_reported_posts(current_moderator: dict = Depends(get_current_moder
         seen_reviews.add(report.review_id)
         review = db.get(Review, report.review_id)
         if review:
-            reported_post = serialize_review(db, review)
+            reported_post = serialize_review(db, review, reports=True)
             reported_post["latest_reported_at"] = report.created_at
             reported_posts.append(reported_post)
 
@@ -87,7 +85,7 @@ async def get_reported_posts(current_moderator: dict = Depends(get_current_moder
         seen_comments.add(report.comment_id)
         comment = db.get(Comment, report.comment_id)
         if comment:
-            reported_comment = serialize_comment(db, comment)
+            reported_comment = serialize_comment(db, comment, reports=True)
             reported_comment["latest_reported_at"] = report.created_at
             reported_comments.append(reported_comment)
 
@@ -112,11 +110,18 @@ async def search_posts(query: str, category: str = None, db: Session = Depends(g
     if not trimmed_query:
         return {"query": query, "category": category, "results": [], "count": 0}
 
-    matches = db.query(Review).join(FoodItem, Review.food_item_id == FoodItem.id, isouter=True).filter(
-        or_(
+    category = strip(category)
+    search_filter = (
+        FoodItem.name.ilike(f"%{trimmed_query}%")
+        if category == "item"
+        else or_(
             Review.content.ilike(f"%{trimmed_query}%"),
             FoodItem.name.ilike(f"%{trimmed_query}%"),
         )
+    )
+
+    matches = db.query(Review).join(FoodItem, Review.food_item_id == FoodItem.id, isouter=True).filter(
+        search_filter
     ).order_by(Review.created_at.desc()).all()
 
     results = [serialize_review(db, post) for post in matches]

@@ -27,13 +27,12 @@ def comment_votes(db: Session, comment: Comment) -> tuple[int, int]:
     return upvotes, downvotes
 
 
-def serialize_review(db: Session, review: Review) -> dict:
+def serialize_review(db: Session, review: Review, reports: bool = False) -> dict:
     author = db.get(User, review.author_id)
     food_item = db.get(FoodItem, review.food_item_id) if review.food_item_id else None
     upvotes, downvotes = votes(db, review)
-    report_count = db.query(Report).filter(Report.review_id == review.id).count()
 
-    return {
+    data = {
         "id": review.id,
         "author_id": review.author_id,
         "author_username": author.username if author else None,
@@ -45,16 +44,18 @@ def serialize_review(db: Session, review: Review) -> dict:
         "created_at": review.created_at,
         "upvotes": upvotes,
         "downvotes": downvotes,
-        "report_count": report_count,
     }
+    if reports:
+        data["report_count"] = db.query(Report).filter(Report.review_id == review.id).count()
+
+    return data
 
 
-def serialize_comment(db: Session, comment: Comment) -> dict:
+def serialize_comment(db: Session, comment: Comment, reports: bool = False) -> dict:
     author = db.get(User, comment.author_id)
     upvotes, downvotes = comment_votes(db, comment)
-    report_count = db.query(Report).filter(Report.comment_id == comment.id).count()
 
-    return {
+    data = {
         "id": comment.id,
         "text": comment.text,
         "author_id": comment.author_id,
@@ -64,5 +65,8 @@ def serialize_comment(db: Session, comment: Comment) -> dict:
         "created_at": comment.created_at,
         "upvotes": upvotes,
         "downvotes": downvotes,
-        "report_count": report_count,
     }
+    if reports:
+        data["report_count"] = db.query(Report).filter(Report.comment_id == comment.id).count()
+
+    return data
