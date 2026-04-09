@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
-from app.schemas import ReviewForm
+from app.schemas import ReviewForm, FoodPlaceCreateForm
 from app.database import get_db
 from sqlmodel import Session
 from app.models import FoodPlace, Review, User
 from uuid import UUID
-from app.utils import get_current_user
+from app.utils import get_current_user, get_current_admin
 from sqlalchemy import or_
 
 
@@ -70,10 +70,14 @@ async def create_place(place: FoodPlaceCreateForm = Depends(), db: Session = Dep
     if db.query(FoodPlace).filter(FoodPlace.name == place.name).first():
         raise HTTPException(status_code=400, detail="Place with this name already exists")
 
-    new_place = FoodPlace(name=place.name, description=place.description)
-    db.add(new_place)
-    db.commit()
-    db.refresh(new_place)
+    try:
+        new_place = FoodPlace(name=place.name, description=place.description)
+        db.add(new_place)
+        db.commit()
+        db.refresh(new_place)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error creating place") from e
     return {"message": "Place created successfully", "place": new_place}
 
 

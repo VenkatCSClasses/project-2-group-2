@@ -56,11 +56,15 @@ async def create_item(item: FoodItemCreateForm = Depends(), db: Session = Depend
     """
     if db.query(FoodItem).filter(FoodItem.name == item.name).first():
         raise HTTPException(status_code=400, detail="Item with this name already exists")
-
-    new_item = FoodItem(name=item.name, description=item.description)
-    db.add(new_item)
-    db.commit()
-    db.refresh(new_item)
+    
+    try:
+        new_item = FoodItem(name=item.name, description=item.description)
+        db.add(new_item)
+        db.commit()
+        db.refresh(new_item)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error creating item") from e
     return {"message": "Item created successfully", "item": new_item}
 
 
