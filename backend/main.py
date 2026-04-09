@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from app.routes import router as api_router
 from app.database import engine
 from sqlmodel import SQLModel
@@ -15,3 +16,4 @@ def on_startup():
 
 ## Import the router declared in app/routes/__init__.py
 app.include_router(api_router)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")

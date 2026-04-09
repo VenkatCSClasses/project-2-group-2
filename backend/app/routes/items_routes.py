@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from app.schemas import ReviewForm, FoodItemCreateForm
-from app.utils import get_current_user, get_current_admin
+from app.utils import get_current_user, get_current_admin, process_and_save_image
 from app.routes.helpers import get_or_404, parse_uuid
 from app.database import get_db
 from sqlmodel import Session
@@ -90,7 +90,7 @@ async def get_item(item_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{item_id}/review")
-async def review_item(item_id: str, form: ReviewForm = Depends(), current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+async def review_item(request: Request, item_id: str, form: ReviewForm = Depends(), current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """
     Submit a review for a food item.
 
@@ -106,6 +106,13 @@ async def review_item(item_id: str, form: ReviewForm = Depends(), current_user: 
 
     item = get_or_404(db, FoodItem, item_id)
     user = get_or_404(db, User, current_user["user_id"])
+    
+    image = form.image
+
+    image_path = None
+    if image:
+        image_path = process_and_save_image(image.file.read(), username=user.username)
+    
 
     try:
         review = Review(
@@ -113,6 +120,7 @@ async def review_item(item_id: str, form: ReviewForm = Depends(), current_user: 
             user=user,
             star_rating=form.rating,
             content=form.description,
+            image_url=image_path
         )
         db.add(review)
         db.commit()
@@ -121,7 +129,7 @@ async def review_item(item_id: str, form: ReviewForm = Depends(), current_user: 
         db.rollback()
         raise HTTPException(status_code=500, detail="Error submitting review") from e
 
-    return {"message": "Review submitted successfully", "review": review}
+    return {"message": "Review submitted successfully", "review": review, "image_path": image_path if image else None}
 
 
 @router.get("/{item_id}/reviews")
