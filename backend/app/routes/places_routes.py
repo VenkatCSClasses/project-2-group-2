@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.schemas import ReviewForm, FoodPlaceCreateForm
 from app.database import get_db
 from sqlmodel import Session
-from app.models import FoodPlace, Review, User
+from app.models import FoodPlace, Review, User, FoodItem
 from uuid import UUID
 from app.utils import get_current_user, get_current_admin
 from sqlalchemy import or_
@@ -96,7 +96,10 @@ async def get_place(place_name: str, db: Session = Depends(get_db)):
     if not place:
         raise HTTPException(status_code=404, detail="Place not found")
 
-    return {"place_id": place.id, "place_info": place}
+    place_info = place.dict()
+    place_info["food_items"] = place.food_items  # Include the menu items in the response
+
+    return {"place_id": place.id, "place_info": place_info}
 
 
 @router.post("/{place_name}/review")
@@ -163,3 +166,40 @@ async def get_place_reviews(place_name: str, start: int = 0, limit: int = 10, db
 
     reviews = db.query(Review).filter(Review.food_place_id == place.id).offset(start).limit(limit).all()
     return {"place_name": place_name, "reviews": reviews, "count": len(reviews)}
+
+
+@router.post("/{place_name}/add-item")
+async def add_item_to_place(place_name: str, item_id: str, db: Session = Depends(get_db), current_admin: dict = Depends(get_current_admin)):
+    """
+    Add a food item to a place's menu.
+
+    - **place_name**: The name of the place to add the item to.
+    - **item_id**: The ID of the food item to add.
+    """
+
+    place = get_place_by_name_or_id(db, place_name)
+
+    if not place:
+        raise HTTPException(status_code=404, detail="Place not found")
+
+    try:
+        item_id = UUID(item_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid UUID format")
+
+    item = db.query(FoodItem).get(item_id)  # Check if item exists
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    if item in place.food_items:
+        raise HTTPException(status_code=400, detail="Item already in place menu")
+
+    try:
+        place.food_items.append(item)
+        db.commit()
+        db.refresh(place)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error adding item to place") from e
+
+    return {"message": "Item added to place successfully", "place": place}
