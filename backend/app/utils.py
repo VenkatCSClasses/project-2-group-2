@@ -3,8 +3,12 @@ import os
 from app.database import cache
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException, status
+from io import BytesIO
+from PIL import Image
+from uuid import uuid4
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+upload_dir = "uploads"
 
 
 def get_current_user(token: str = Depends(oauth2_scheme)):
@@ -87,3 +91,26 @@ def get_current_admin(current_user: dict = Depends(get_current_user)):
             detail="You do not have permission to perform this action"
         )
     return current_user
+
+
+def process_and_save_image(file_content: bytes, username: str = None) -> str:
+    img = Image.open(BytesIO(file_content))
+    
+    # Standarize color mode
+    if img.mode in ("RGBA", "P"):
+        img = img.convert("RGB")
+    
+    # Resize images to save storage for large uploads
+    max_size = (1920, 1920) # Max width and height
+    img.thumbnail(max_size, Image.Resampling.LANCZOS)
+
+    exif_data = img.getexif()
+    exif_data.clear()
+    if username:
+        exif_data[315] = username  # Set the Artist tag to the username for attribution
+    
+    file_name = f"{uuid4()}.webp"
+    file_path = f"{upload_dir}/{file_name}"
+    img.save(file_path, "WEBP", quality=80, optimize=True, exif=exif_data)
+
+    return file_path
