@@ -1,4 +1,10 @@
-import { ChangeEvent, FormEvent, useState } from 'react'
+import { ChangeEvent, FormEvent, useMemo, useState } from 'react'
+
+const API_BASE_URL = 'http://127.0.0.1:8000'
+
+type RatingUploadPageProps = {
+  token: string
+}
 
 type FormDataState = {
   itemId: string
@@ -10,10 +16,35 @@ type FormDataState = {
 }
 
 type FormErrors = {
-  itemId?: string
-  itemName?: string
   diningHall?: string
+  itemId?: string
   rating?: string
+}
+
+type ItemResult = {
+  id: string
+  name: string
+  description?: string | null
+  image_url?: string | null
+  food_place_id?: string | null
+}
+
+type PlaceResult = {
+  id: string
+  name: string
+  description?: string | null
+  image_url?: string | null
+}
+
+type PlaceInfoResponse = {
+  place_id: string
+  place_info: {
+    id: string
+    name: string
+    description?: string | null
+    image_url?: string | null
+    food_items?: ItemResult[]
+  }
 }
 
 const initialFormState: FormDataState = {
@@ -25,45 +56,76 @@ const initialFormState: FormDataState = {
   image: null,
 }
 
-function validateForm(formData: FormDataState): FormErrors {
+function validateForm(
+  formData: FormDataState,
+  selectedPlaceId: string
+): FormErrors {
   const errors: FormErrors = {}
 
+  if (!selectedPlaceId) {
+    errors.diningHall = 'Dining hall selection is required'
+  }
+
   if (!formData.itemId.trim()) {
-    errors.itemId = 'Item ID is required'
-  }
-
-  if (!formData.itemName.trim()) {
-    errors.itemName = 'Item name is required'
-  }
-
-  if (!formData.diningHall.trim()) {
-    errors.diningHall = 'Dining hall is required'
+    errors.itemId = 'Food item selection is required'
   }
 
   if (!formData.rating.trim()) {
     errors.rating = 'Rating is required'
   } else {
     const numericRating = Number(formData.rating)
-    if (numericRating < 1 || numericRating > 5) {
-      errors.rating = 'Rating must be between 1 and 5'
+    if (!Number.isInteger(numericRating) || numericRating < 1 || numericRating > 10) {
+      errors.rating = 'Rating must be an integer between 1 and 10'
     }
   }
 
   return errors
 }
 
-function RatingUploadPage() {
+function RatingUploadPage({ token }: RatingUploadPageProps) {
   const [formData, setFormData] = useState<FormDataState>(initialFormState)
   const [errors, setErrors] = useState<FormErrors>({})
+  const [submitMessage, setSubmitMessage] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const [placeResults, setPlaceResults] = useState<PlaceResult[]>([])
+  const [menuItems, setMenuItems] = useState<ItemResult[]>([])
+  const [selectedPlaceId, setSelectedPlaceId] = useState('')
+  const [selectedPlaceName, setSelectedPlaceName] = useState('')
+
+  const [isSearchingPlaces, setIsSearchingPlaces] = useState(false)
+  const [isLoadingMenu, setIsLoadingMenu] = useState(false)
 
   function handleChange(
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) {
     const { name, value } = event.target
+
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }))
+
+    if (name === 'diningHall') {
+      setPlaceResults([])
+      setSelectedPlaceId('')
+      setSelectedPlaceName('')
+      setMenuItems([])
+      setFormData((prev) => ({
+        ...prev,
+        diningHall: value,
+        itemId: '',
+        itemName: '',
+      }))
+    }
+
+    if (name === 'itemName') {
+      setFormData((prev) => ({
+        ...prev,
+        itemName: value,
+        itemId: '',
+      }))
+    }
   }
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -74,46 +136,180 @@ function RatingUploadPage() {
     }))
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  async function handleSearchPlaces() {
+    setSubmitMessage('')
+    setPlaceResults([])
 
-    const validationErrors = validateForm(formData)
+    if (!formData.diningHall.trim()) {
+      setSubmitMessage('Enter a dining hall name to search')
+      return
+    }
+
+    setIsSearchingPlaces(true)
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/places/search?query=${encodeURIComponent(formData.diningHall)}`
+      )
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setSubmitMessage(data?.detail || data?.message || 'Failed to search places')
+        return
+      }
+
+      setPlaceResults(data?.results ?? [])
+    } catch (error) {
+      console.error(error)
+      setSubmitMessage('Network error while searching places')
+    } finally {
+      setIsSearchingPlaces(false)
+    }
+  }
+
+  async function handleSelectPlace(place: PlaceResult) {
+    setSubmitMessage('')
+    setIsLoadingMenu(true)
+    setSelectedPlaceId(place.id)
+    setSelectedPlaceName(place.name)
+    setPlaceResults([])
+
+    setFormData((prev) => ({
+      ...prev,
+      diningHall: place.name,
+      itemId: '',
+      itemName: '',
+    }))
+
+    setErrors((prev) => ({
+      ...prev,
+      diningHall: undefined,
+      itemId: undefined,
+    }))
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/places/${encodeURIComponent(place.id)}`
+      )
+
+      const data: PlaceInfoResponse = await response.json()
+
+      if (!response.ok) {
+        setSubmitMessage(
+          (data as { detail?: string; message?: string })?.detail ||
+            (data as { detail?: string; message?: string })?.message ||
+            'Failed to load dining hall menu'
+        )
+        setMenuItems([])
+        return
+      }
+
+      setMenuItems(data?.place_info?.food_items ?? [])
+      setSubmitMessage(`Selected place: ${place.name}`)
+    } catch (error) {
+      console.error(error)
+      setSubmitMessage('Network error while loading dining hall menu')
+      setMenuItems([])
+    } finally {
+      setIsLoadingMenu(false)
+    }
+  }
+
+  const filteredMenuItems = useMemo(() => {
+    const query = formData.itemName.trim().toLowerCase()
+
+    if (!query) {
+      return menuItems
+    }
+
+    return menuItems.filter((item) => {
+      const name = item.name?.toLowerCase() ?? ''
+      const description = item.description?.toLowerCase() ?? ''
+      return name.includes(query) || description.includes(query)
+    })
+  }, [menuItems, formData.itemName])
+
+  function handleSelectItem(item: ItemResult) {
+    setFormData((prev) => ({
+      ...prev,
+      itemId: item.id,
+      itemName: item.name,
+    }))
+
+    setErrors((prev) => ({
+      ...prev,
+      itemId: undefined,
+    }))
+
+    setSubmitMessage(`Selected item: ${item.name}`)
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setSubmitMessage('')
+
+    if (!token) {
+      setSubmitMessage('You must be logged in')
+      return
+    }
+
+    const validationErrors = validateForm(formData, selectedPlaceId)
     setErrors(validationErrors)
 
     if (Object.keys(validationErrors).length > 0) {
       return
     }
+
+    setIsSubmitting(true)
+
+    try {
+      const requestBody = new FormData()
+      requestBody.append('rating', formData.rating)
+      requestBody.append('description', formData.description)
+
+      if (formData.image) {
+        requestBody.append('image', formData.image)
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/items/${formData.itemId}/review`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: requestBody,
+        }
+      )
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setSubmitMessage(data?.detail || data?.message || 'Failed to submit review')
+        return
+      }
+
+      setSubmitMessage('Review submitted successfully')
+      setFormData(initialFormState)
+      setErrors({})
+      setPlaceResults([])
+      setMenuItems([])
+      setSelectedPlaceId('')
+      setSelectedPlaceName('')
+    } catch (error) {
+      console.error(error)
+      setSubmitMessage('Network error while submitting review')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
-    <main>
-      <h1>Upload Rating</h1>
+    <section>
+      <h2>Upload Rating</h2>
 
       <form onSubmit={handleSubmit} noValidate>
-        <div>
-          <label htmlFor="itemId">Item ID</label>
-          <input
-            id="itemId"
-            name="itemId"
-            type="text"
-            value={formData.itemId}
-            onChange={handleChange}
-          />
-          {errors.itemId && <p>{errors.itemId}</p>}
-        </div>
-
-        <div>
-          <label htmlFor="itemName">Item Name</label>
-          <input
-            id="itemName"
-            name="itemName"
-            type="text"
-            value={formData.itemName}
-            onChange={handleChange}
-          />
-          {errors.itemName && <p>{errors.itemName}</p>}
-        </div>
-
         <div>
           <label htmlFor="diningHall">Dining Hall</label>
           <input
@@ -122,9 +318,79 @@ function RatingUploadPage() {
             type="text"
             value={formData.diningHall}
             onChange={handleChange}
+            placeholder="Search for a dining hall"
           />
+          <button
+            type="button"
+            onClick={handleSearchPlaces}
+            disabled={isSearchingPlaces}
+            style={{ marginLeft: '0.5rem' }}
+          >
+            {isSearchingPlaces ? 'Searching...' : 'Search Places'}
+          </button>
           {errors.diningHall && <p>{errors.diningHall}</p>}
         </div>
+
+        {placeResults.length > 0 && (
+          <div style={{ marginTop: '0.75rem', marginBottom: '1rem' }}>
+            <p>Select a dining hall:</p>
+            <ul>
+              {placeResults.map((place) => (
+                <li key={place.id} style={{ marginBottom: '0.5rem' }}>
+                  <button type="button" onClick={() => handleSelectPlace(place)}>
+                    {place.name}
+                  </button>
+                  {place.description ? <span> — {place.description}</span> : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {selectedPlaceName && (
+          <p>
+            Selected dining hall: <strong>{selectedPlaceName}</strong>
+          </p>
+        )}
+
+        <div>
+          <label htmlFor="itemName">Food Item</label>
+          <input
+            id="itemName"
+            name="itemName"
+            type="text"
+            value={formData.itemName}
+            onChange={handleChange}
+            placeholder={
+              selectedPlaceId
+                ? 'Filter items from the selected dining hall'
+                : 'Select a dining hall first'
+            }
+            disabled={!selectedPlaceId}
+          />
+        </div>
+
+        {isLoadingMenu && <p>Loading menu...</p>}
+
+        {selectedPlaceId && !isLoadingMenu && filteredMenuItems.length > 0 && (
+          <div style={{ marginTop: '0.75rem', marginBottom: '1rem' }}>
+            <p>Select a food item:</p>
+            <ul>
+              {filteredMenuItems.map((item) => (
+                <li key={item.id} style={{ marginBottom: '0.5rem' }}>
+                  <button type="button" onClick={() => handleSelectItem(item)}>
+                    {item.name}
+                  </button>
+                  {item.description ? <span> — {item.description}</span> : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {selectedPlaceId && !isLoadingMenu && menuItems.length === 0 && (
+          <p>No menu items found for this dining hall.</p>
+        )}
 
         <div>
           <label htmlFor="rating">Rating</label>
@@ -133,7 +399,8 @@ function RatingUploadPage() {
             name="rating"
             type="number"
             min="1"
-            max="5"
+            max="10"
+            step="1"
             value={formData.rating}
             onChange={handleChange}
           />
@@ -161,9 +428,13 @@ function RatingUploadPage() {
           />
         </div>
 
-        <button type="submit">Submit</button>
+        <button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'Submitting...' : 'Submit'}
+        </button>
       </form>
-    </main>
+
+      {submitMessage && <p>{submitMessage}</p>}
+    </section>
   )
 }
 
