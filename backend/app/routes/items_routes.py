@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.schemas import ReviewForm, FoodItemCreateForm
 from app.utils import get_current_user, get_current_admin
-from app.routes.helpers import get_or_404
+from app.routes.helpers import get_or_404, parse_uuid
 from app.database import get_db
 from sqlmodel import Session
 from app.models import FoodItem, Review, User
@@ -57,11 +57,15 @@ async def create_item(item: FoodItemCreateForm = Depends(), db: Session = Depend
     """
     if db.query(FoodItem).filter(FoodItem.name == item.name).first():
         raise HTTPException(status_code=400, detail="Item with this name already exists")
-
-    new_item = FoodItem(name=item.name, description=item.description)
-    db.add(new_item)
-    db.commit()
-    db.refresh(new_item)
+    
+    try:
+        new_item = FoodItem(name=item.name, description=item.description)
+        db.add(new_item)
+        db.commit()
+        db.refresh(new_item)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error creating item") from e
     return {"message": "Item created successfully", "item": new_item}
 
 
@@ -103,15 +107,19 @@ async def review_item(item_id: str, form: ReviewForm = Depends(), current_user: 
     item = get_or_404(db, FoodItem, item_id)
     user = get_or_404(db, User, current_user["user_id"])
 
-    review = Review(
-        food_item=item,
-        user=user,
-        star_rating=form.rating,
-        content=form.description,
-    )
-    db.add(review)
-    db.commit()
-    db.refresh(review)
+    try:
+        review = Review(
+            food_item=item,
+            user=user,
+            star_rating=form.rating,
+            content=form.description,
+        )
+        db.add(review)
+        db.commit()
+        db.refresh(review)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error submitting review") from e
 
     return {"message": "Review submitted successfully", "review": review}
 
@@ -138,5 +146,5 @@ async def get_item_reviews(item_id: str, start: int = 0, limit: int = 10, db: Se
 
     item = get_or_404(db, FoodItem, item_id)
 
-    reviews = db.query(Review).filter(Review.food_item_id == item_id).offset(start).limit(limit).all()
+    reviews = db.query(Review).filter(Review.food_item_id == item.id).offset(start).limit(limit).all()
     return {"item_id": item_id, "reviews": reviews, "count": len(reviews)}
