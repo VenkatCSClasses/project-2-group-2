@@ -1,11 +1,16 @@
 # ruff: noqa (disable linting for this file)
+from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, Enum, String
+from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, Enum, String, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.schemas import UserRole
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class User(SQLModel, table=True):
@@ -24,6 +29,8 @@ class User(SQLModel, table=True):
 
     reviews: List["Review"] = Relationship(back_populates="user", cascade_delete=True)
     comments: List["Comment"] = Relationship(back_populates="author", cascade_delete=True)
+    votes: List["Vote"] = Relationship(back_populates="user", cascade_delete=True)
+    reports: List["Report"] = Relationship(back_populates="reporter", cascade_delete=True)
 
     def __repr__(self):
         return f"<User(id={self.id}, username='{self.username}', email='{self.email}', role='{self.role}')>"
@@ -56,11 +63,17 @@ class Review(SQLModel, table=True):
     star_rating: int = Field(le=10, ge=1, index=True)  # 1-10 (each int represents a half star, so 10 = 5 stars, 9 = 4.5 stars, etc)
     content: Optional[str] = Field(default=None)
     image_url: Optional[str] = Field(default=None)
+    created_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=Column(DateTime(timezone=True), nullable=False, index=True),
+    )
     
     user: Optional["User"] = Relationship(back_populates="reviews")
     food_item: Optional["FoodItem"] = Relationship(back_populates="reviews")
     food_place: Optional["FoodPlace"] = Relationship(back_populates="reviews")
     comments: List["Comment"] = Relationship(back_populates="review", cascade_delete=True)
+    votes: List["Vote"] = Relationship(back_populates="review", cascade_delete=True)
+    reports: List["Report"] = Relationship(back_populates="review", cascade_delete=True)
 
     def __repr__(self):
         return f"<Review(id={self.id}, author_id={self.author_id}, food_item_id={self.food_item_id}, star_rating={self.star_rating})>"
@@ -76,15 +89,21 @@ class Comment(SQLModel, table=True):
     review_id: UUID = Field(foreign_key="reviews.id")
     
     parent_id: Optional[UUID] = Field(default=None, foreign_key="comments.id") # Parent comment for reply functionality
+    created_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=Column(DateTime(timezone=True), nullable=False, index=True),
+    )
     
     author: Optional["User"] = Relationship(back_populates="comments")
     review: Optional["Review"] = Relationship(back_populates="comments")
+    votes: List["Vote"] = Relationship(back_populates="comment", cascade_delete=True)
+    reports: List["Report"] = Relationship(back_populates="comment", cascade_delete=True)
     
     parent: Optional["Comment"] = Relationship(
         back_populates="replies", 
         sa_relationship_kwargs=dict(remote_side="Comment.id")
     )
-    replies: List["Comment"] = Relationship(back_populates="parent")
+    replies: List["Comment"] = Relationship(back_populates="parent", cascade_delete=True)
 
     def __repr__(self):
         return f"<Comment(id={self.id}, author_id={self.author_id}, review_id={self.review_id}, text='{self.text}')>"
@@ -104,3 +123,61 @@ class FoodPlace(SQLModel, table=True):
 
     def __repr__(self):
         return f"<FoodPlace(id={self.id}, name='{self.name}', description='{self.description}')>"
+
+
+class Vote(SQLModel, table=True):
+    __tablename__ = "votes"  # type: ignore[assignment]
+    __table_args__ = (
+        UniqueConstraint("user_id", "review_id", name="uq_votes_user_review"),
+        UniqueConstraint("user_id", "comment_id", name="uq_votes_user_comment"),
+        CheckConstraint(
+            "((review_id IS NOT NULL AND comment_id IS NULL) OR (review_id IS NULL AND comment_id IS NOT NULL))",
+            name="ck_votes_single_target",
+        ),
+    )
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    user_id: UUID = Field(foreign_key="users.id")
+    review_id: Optional[UUID] = Field(default=None, foreign_key="reviews.id")
+    comment_id: Optional[UUID] = Field(default=None, foreign_key="comments.id")
+    is_upvote: bool = Field(sa_column=Column(Boolean, nullable=False))
+    created_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=Column(DateTime(timezone=True), nullable=False, index=True),
+    )
+
+    user: Optional["User"] = Relationship(back_populates="votes")
+    review: Optional["Review"] = Relationship(back_populates="votes")
+    comment: Optional["Comment"] = Relationship(back_populates="votes")
+
+    def __repr__(self):
+        return f"<Vote(id={self.id}, user_id={self.user_id}, review_id={self.review_id}, comment_id={self.comment_id}, is_upvote={self.is_upvote})>"
+
+
+class Report(SQLModel, table=True):
+    __tablename__ = "reports"  # type: ignore[assignment]
+    __table_args__ = (
+        UniqueConstraint("reporter_id", "review_id", name="uq_reports_user_review"),
+        UniqueConstraint("reporter_id", "comment_id", name="uq_reports_user_comment"),
+        CheckConstraint(
+            "((review_id IS NOT NULL AND comment_id IS NULL) OR (review_id IS NULL AND comment_id IS NOT NULL))",
+            name="ck_reports_single_target",
+        ),
+    )
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    reporter_id: UUID = Field(foreign_key="users.id")
+    review_id: Optional[UUID] = Field(default=None, foreign_key="reviews.id")
+    comment_id: Optional[UUID] = Field(default=None, foreign_key="comments.id")
+    reason: Optional[str] = Field(default=None, sa_type=String(256))
+    created_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=Column(DateTime(timezone=True), nullable=False, index=True),
+    )
+
+    reporter: Optional["User"] = Relationship(back_populates="reports")
+    review: Optional["Review"] = Relationship(back_populates="reports")
+    comment: Optional["Comment"] = Relationship(back_populates="reports")
+
+    def __repr__(self):
+        return f"<Report(id={self.id}, reporter_id={self.reporter_id}, review_id={self.review_id}, comment_id={self.comment_id})>"
