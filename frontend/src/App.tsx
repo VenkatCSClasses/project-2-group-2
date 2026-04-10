@@ -1,120 +1,109 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
 import './App.css'
+import RatingUploadPage from './components/RatingUploadPage'
+
+const API_BASE_URL = 'http://localhost:8000'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [token, setToken] = useState<string | null>(null)
+  const [mode, setMode] = useState<'login' | 'register'>('login')
 
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [email, setEmail] = useState('')
+  const [message, setMessage] = useState('')
+
+  async function handleAuth(e: React.FormEvent) {
+    e.preventDefault()
+    setMessage('')
+
+    try {
+      const endpoint = mode === 'login' ? '/auth/login' : '/auth/register'
+
+      const body =
+        mode === 'login'
+          ? new URLSearchParams({ username, password })
+          : new URLSearchParams({ username, password, email })
+
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body,
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setMessage(data?.detail || data?.message || 'Auth failed')
+        return
+      }
+
+      // BOTH login and register return token
+      setToken(data.access_token)
+      setMessage('Success!')
+    } catch (err) {
+      console.error(err)
+      setMessage('Network error')
+    }
+  }
+
+  // ✅ If logged in → show upload page
+  if (token) {
+    return (
+      <main>
+        <h1>Food Review App</h1>
+        <button onClick={() => setToken(null)}>Logout</button>
+        <RatingUploadPage token={token} />
+      </main>
+    )
+  }
+
+  // ❌ Not logged in → show auth form
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
+    <main>
+      <h1>Food Review App</h1>
+
+      <h2>{mode === 'login' ? 'Login' : 'Register'}</h2>
+
+      <form onSubmit={handleAuth}>
+        <input
+          placeholder="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+        />
+
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+
+        {mode === 'register' && (
+          <input
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        )}
+
+        <button type="submit">
+          {mode === 'login' ? 'Login' : 'Register'}
         </button>
-      </section>
+      </form>
 
-      <div className="ticks"></div>
+      <button
+        onClick={() =>
+          setMode(mode === 'login' ? 'register' : 'login')
+        }
+      >
+        Switch to {mode === 'login' ? 'Register' : 'Login'}
+      </button>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      {message && <p>{message}</p>}
+    </main>
   )
 }
 
