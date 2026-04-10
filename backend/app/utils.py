@@ -94,6 +94,14 @@ def get_current_admin(current_user: dict = Depends(get_current_user)):
 
 
 def process_and_save_image(file_content: bytes, username: str = None) -> str:
+    """
+    Process and save an image file.
+
+    file_content: The content of the image file.
+    username: The username of the user uploading the image.
+
+    returns: The path to the saved image file.
+    """
     img = Image.open(BytesIO(file_content))
     
     # Standarize color mode
