@@ -24,4 +24,4 @@ build/
 *.zip
 .env
 .ruff_cache/
-backend/uploads/*
+uploads/*
