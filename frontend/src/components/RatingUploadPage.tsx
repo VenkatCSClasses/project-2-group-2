@@ -1,6 +1,6 @@
 import { ChangeEvent, FormEvent, useMemo, useState } from 'react'
 
-const API_BASE_URL = 'http://127.0.0.1:8000'
+const API_BASE_URL = 'http://localhost:8000'
 
 type RatingUploadPageProps = {
   token: string
@@ -37,10 +37,10 @@ type PlaceResult = {
 }
 
 type PlaceInfoResponse = {
-  place_id: string
-  place_info: {
-    id: string
-    name: string
+  place_id?: string
+  place_info?: {
+    id?: string
+    name?: string
     description?: string | null
     image_url?: string | null
     food_items?: ItemResult[]
@@ -74,7 +74,11 @@ function validateForm(
     errors.rating = 'Rating is required'
   } else {
     const numericRating = Number(formData.rating)
-    if (!Number.isInteger(numericRating) || numericRating < 1 || numericRating > 10) {
+    if (
+      !Number.isInteger(numericRating) ||
+      numericRating < 1 ||
+      numericRating > 10
+    ) {
       errors.rating = 'Rating must be an integer between 1 and 10'
     }
   }
@@ -111,6 +115,7 @@ function RatingUploadPage({ token }: RatingUploadPageProps) {
       setSelectedPlaceId('')
       setSelectedPlaceName('')
       setMenuItems([])
+
       setFormData((prev) => ({
         ...prev,
         diningHall: value,
@@ -152,16 +157,46 @@ function RatingUploadPage({ token }: RatingUploadPageProps) {
         `${API_BASE_URL}/places/search?query=${encodeURIComponent(formData.diningHall)}`
       )
 
-      const data = await response.json()
+      const rawText = await response.text()
+      let data: unknown = null
 
-      if (!response.ok) {
-        setSubmitMessage(data?.detail || data?.message || 'Failed to search places')
+      try {
+        data = rawText ? JSON.parse(rawText) : null
+      } catch (parseError) {
+        console.error('places/search parse error:', parseError, rawText)
+        setSubmitMessage('Search returned an invalid response from the server')
         return
       }
 
-      setPlaceResults(data?.results ?? [])
+      if (!response.ok) {
+        const errorData = data as { detail?: string; message?: string } | null
+        setSubmitMessage(
+          errorData?.detail ||
+            errorData?.message ||
+            'Failed to search places'
+        )
+        return
+      }
+
+      let results: PlaceResult[] = []
+
+      if (Array.isArray(data)) {
+        results = data as PlaceResult[]
+      } else if (
+        data &&
+        typeof data === 'object' &&
+        Array.isArray((data as { results?: unknown[] }).results)
+      ) {
+        results = (data as { results: PlaceResult[] }).results
+      }
+
+      setPlaceResults(results)
+
+      if (results.length === 0) {
+        setSubmitMessage('No dining halls found')
+      }
     } catch (error) {
-      console.error(error)
+      console.error('places/search fetch error:', error)
       setSubmitMessage('Network error while searching places')
     } finally {
       setIsSearchingPlaces(false)
@@ -190,25 +225,37 @@ function RatingUploadPage({ token }: RatingUploadPageProps) {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/places/${encodeURIComponent(place.id)}`
+        `${API_BASE_URL}/places/${encodeURIComponent(place.name)}`
       )
 
-      const data: PlaceInfoResponse = await response.json()
+      const rawText = await response.text()
+      let data: unknown = null
+
+      try {
+        data = rawText ? JSON.parse(rawText) : null
+      } catch (parseError) {
+        console.error('place details parse error:', parseError, rawText)
+        setSubmitMessage('Dining hall menu returned an invalid response')
+        setMenuItems([])
+        return
+      }
 
       if (!response.ok) {
+        const errorData = data as { detail?: string; message?: string } | null
         setSubmitMessage(
-          (data as { detail?: string; message?: string })?.detail ||
-            (data as { detail?: string; message?: string })?.message ||
+          errorData?.detail ||
+            errorData?.message ||
             'Failed to load dining hall menu'
         )
         setMenuItems([])
         return
       }
 
-      setMenuItems(data?.place_info?.food_items ?? [])
+      const placeInfoData = data as PlaceInfoResponse | null
+      setMenuItems(placeInfoData?.place_info?.food_items ?? [])
       setSubmitMessage(`Selected place: ${place.name}`)
     } catch (error) {
-      console.error(error)
+      console.error('place details fetch error:', error)
       setSubmitMessage('Network error while loading dining hall menu')
       setMenuItems([])
     } finally {
@@ -283,10 +330,24 @@ function RatingUploadPage({ token }: RatingUploadPageProps) {
         }
       )
 
-      const data = await response.json()
+      const rawText = await response.text()
+      let data: unknown = null
+
+      try {
+        data = rawText ? JSON.parse(rawText) : null
+      } catch (parseError) {
+        console.error('review submit parse error:', parseError, rawText)
+        setSubmitMessage('Submit returned an invalid response from the server')
+        return
+      }
 
       if (!response.ok) {
-        setSubmitMessage(data?.detail || data?.message || 'Failed to submit review')
+        const errorData = data as { detail?: string; message?: string } | null
+        setSubmitMessage(
+          errorData?.detail ||
+            errorData?.message ||
+            'Failed to submit review'
+        )
         return
       }
 
@@ -298,7 +359,7 @@ function RatingUploadPage({ token }: RatingUploadPageProps) {
       setSelectedPlaceId('')
       setSelectedPlaceName('')
     } catch (error) {
-      console.error(error)
+      console.error('review submit fetch error:', error)
       setSubmitMessage('Network error while submitting review')
     } finally {
       setIsSubmitting(false)
