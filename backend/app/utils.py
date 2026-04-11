@@ -148,4 +148,4 @@ def ensure_admin_user_in_db(db):
         db.add(default_admin)
         db.commit()
         db.refresh(default_admin)
-    print("Admin user ensured in database")
+        print("Admin user created with username:", default_admin.username)
