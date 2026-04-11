@@ -24,7 +24,7 @@ class User(SQLModel, table=True):
 
     role: UserRole = Field(
         default=UserRole.USER,
-        sa_column=Column(Enum(UserRole), nullable=False),
+        sa_column=Column(Enum(UserRole), nullable=False, index=True),
     )
 
     reviews: List["Review"] = Relationship(back_populates="user", cascade_delete=True)
