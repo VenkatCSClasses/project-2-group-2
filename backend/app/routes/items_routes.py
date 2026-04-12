@@ -11,6 +11,13 @@ from sqlalchemy import or_
 # This will be mounted at "/items" in main.py, so all routes here will be prefixed with /items
 router = APIRouter()
 
+def calculate_average_rating(reviews: list[Review]) -> float:
+    if not reviews:
+        return None
+    total = sum(review.star_rating for review in reviews)
+    raw_average = total / len(reviews)
+    return round(raw_average) # Round to nearest integer to fit our 1-10 scale
+
 @router.get("/")
 async def get_items(start: int = 0, limit: int = 10, db: Session = Depends(get_db)):
     """
@@ -125,6 +132,12 @@ async def review_item(request: Request, item_id: str, form: ReviewForm = Depends
         db.add(review)
         db.commit()
         db.refresh(review)
+
+        db.refresh(item)  # Refresh the item to get the latest reviews
+        item.average_rating = calculate_average_rating(item.reviews)
+        db.add(item)
+        db.commit()
+        db.refresh(item)
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail="Error submitting review") from e

@@ -43,6 +43,7 @@ class FoodItem(SQLModel, table=True):
     name: str = Field(sa_type=String(100), unique=True, index=True)
     description: Optional[str] = Field(default=None, sa_type=String(256))
     image_url: Optional[str] = Field(default=None)
+    average_rating: Optional[int] = Field(default=None, ge=1, le=10)  # 1-10 (each int represents a half star, so 10 = 5 stars, 9 = 4.5 stars, etc)
     
     reviews: List["Review"] = Relationship(back_populates="food_item", cascade_delete=True)
     food_place_id: Optional[UUID] = Field(default=None, foreign_key="food_places.id")
