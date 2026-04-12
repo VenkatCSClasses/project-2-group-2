@@ -2,13 +2,16 @@ import jwt
 import os
 from app.database import cache
 from fastapi.security import OAuth2PasswordBearer
+from argon2 import PasswordHasher
 from fastapi import Depends, HTTPException, status
 from io import BytesIO
 from PIL import Image
 from uuid import uuid4
+from app.models import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
-upload_dir = "uploads"
+upload_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
+ph = PasswordHasher()
 
 
 def get_current_user(token: str = Depends(oauth2_scheme)):
@@ -94,6 +97,14 @@ def get_current_admin(current_user: dict = Depends(get_current_user)):
 
 
 def process_and_save_image(file_content: bytes, username: str = None) -> str:
+    """
+    Process and save an image file.
+
+    file_content: The content of the image file.
+    username: The username of the user uploading the image.
+
+    returns: The path to the saved image file.
+    """
     img = Image.open(BytesIO(file_content))
     
     # Standarize color mode
@@ -109,8 +120,32 @@ def process_and_save_image(file_content: bytes, username: str = None) -> str:
     if username:
         exif_data[315] = username  # Set the Artist tag to the username for attribution
     
+    os.makedirs(upload_dir, exist_ok=True)
+
     file_name = f"{uuid4()}.webp"
-    file_path = f"{upload_dir}/{file_name}"
+    file_path = f"/uploads/{file_name}"
     img.save(file_path, "WEBP", quality=80, optimize=True, exif=exif_data)
 
-    return f"/uploads/{file_name}"
+    return file_path
+
+
+def ensure_admin_user_in_db(db):
+    """
+    Ensure that an admin user exists in the database. If not, create a default admin user.
+
+    db: The database session to use for querying and creating the admin user.
+    """
+    
+
+    admin_user = db.query(User).filter(User.role == "admin").first()
+    if not admin_user:
+        default_admin = User(
+            username=os.getenv("DEFAULT_ADMIN_USERNAME", "root"),
+            password_hash=ph.hash(os.getenv("DEFAULT_ADMIN_PASSWORD", "root")),
+            email=os.getenv("DEFAULT_ADMIN_EMAIL", ""),
+            role="admin"
+        )
+        db.add(default_admin)
+        db.commit()
+        db.refresh(default_admin)
+        print("Admin user created with username:", default_admin.username)
