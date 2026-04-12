@@ -123,10 +123,10 @@ def process_and_save_image(file_content: bytes, username: str = None) -> str:
     os.makedirs(upload_dir, exist_ok=True)
 
     file_name = f"{uuid4()}.webp"
-    file_path = f"/uploads/{file_name}"
+    file_path = f"{upload_dir}/{file_name}"
     img.save(file_path, "WEBP", quality=80, optimize=True, exif=exif_data)
 
-    return file_path
+    return f"/uploads/{file_name}"
 
 
 def ensure_admin_user_in_db(db):
