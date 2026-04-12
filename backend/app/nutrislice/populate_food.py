@@ -53,19 +53,22 @@ def populate_day(db: Session, day: int = 0) -> None:
     terrace_menus, cc_menus = get_terrace_and_cc_menus(day)
 
     terrace_place = db.exec(select(FoodPlace).where(FoodPlace.name == "Terrace Dining Hall")).first()
+    if not terrace_place:
+        terrace_place = FoodPlace(name="Terrace Dining Hall", description="Terrace Dining Hall")
+        db.add(terrace_place)
+        logger.info("Created food place: Terrace Dining Hall")
+
     cc_place = db.exec(select(FoodPlace).where(FoodPlace.name == "Campus Center Dining Hall")).first()
+    if not cc_place:
+        cc_place = FoodPlace(name="Campus Center Dining Hall", description="Campus Center Dining Hall")
+        db.add(cc_place)
+        logger.info("Created food place: Campus Center Dining Hall")
 
-    if terrace_place:
-        for terrace_menu in terrace_menus:
-            populate_food_items(db, terrace_menu, terrace_place.id)
-    else:
-        logger.warning("Food place not found: Terrace Dining Hall")
+    for terrace_menu in terrace_menus:
+        populate_food_items(db, terrace_menu, terrace_place.id)
 
-    if cc_place:
-        for cc_menu in cc_menus:
-            populate_food_items(db, cc_menu, cc_place.id)
-    else:
-        logger.warning("Food place not found: Campus Center Dining Hall")
+    for cc_menu in cc_menus:
+        populate_food_items(db, cc_menu, cc_place.id)
 
     try:
         db.commit()

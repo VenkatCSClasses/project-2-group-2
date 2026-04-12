@@ -1,15 +1,17 @@
 import os
 from datetime import datetime, timedelta
 from fastapi import APIRouter
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from typing import Annotated
 from app.database import get_db
 from app.models import User
 from argon2 import PasswordHasher
+from app.utils import get_current_user
 import jwt
-from app.schemas import RegisterForm, UserRole
+from app.schemas import RegisterForm, UserRole, ChangePasswordForm
 from sqlmodel import Session, select
+
 
 # This will be mounted at "/auth" in main.py, so all routes here will be prefixed with /auth
 router = APIRouter()
@@ -26,21 +28,27 @@ def generate_token(user_id: str, role: UserRole, token_type: str = "access"):
     return token
 
 
+def verify_password(user: User, password_str: str):
+    try:
+        ph.verify(user.password_hash, password_str)
+        return True
+    except Exception:
+        return False
+
+
 def login_user(db, username: str, password_str: str):
     # Find the user
     user = db.exec(select(User).where(User.username == username)).first()
     if user is None:
         raise ValueError("Invalid username or password")
     
-    try:
-        ph.verify(user.password_hash, password_str)
-        print(f"User logged in: {user.username}")
-        token = generate_token(str(user.id), user.role)
-        refresh_token = generate_token(str(user.id), user.role, token_type="refresh")
-        return token, refresh_token
-    except Exception:
-        print(f"Error occurred while logging in user: {user.username}")
+    verified = verify_password(user, password_str)
+    if not verified:
         raise ValueError("Invalid username or password")
+
+    token = generate_token(user.id, user.role)
+    return token
+
 
 
 def register_user(db, username: str, password_str: str, email: str):
@@ -83,7 +91,7 @@ async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: 
     """
 
     try:
-        token, refresh_token = login_user(db, form_data.username, form_data.password)
+        token = login_user(db, form_data.username, form_data.password)
         return {
             "message": "Logged in successfully", 
             "access_token": token, 
@@ -112,3 +120,53 @@ async def register(form_data: Annotated[RegisterForm, Depends()], db: Session = 
         }
     except ValueError as e:
         return {"message": str(e)}, 400
+
+
+@router.post("/change-password")
+async def change_password(form_data: Annotated[ChangePasswordForm, Depends()], db: Session = Depends(get_db)):
+    """
+    Change the password for the current user.
+
+    This endpoint allows a user to change their password by providing the current password and the new password.
+
+    - **form_data**: The form data containing the current password and the new password.
+    - **db**: The database session.
+    """
+    # Implementation for changing password
+        
+    user = db.exec(select(User).where(User.username == form_data.username)).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not verify_password(user, form_data.current_password):
+        raise HTTPException(status_code=401, detail="Current password is incorrect")
+
+    # If password is correct, update it
+    user.password_hash = ph.hash(form_data.new_password)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return {"message": "Password changed successfully"}
+
+
+@router.post("/change-username")
+async def change_username(new_username: str, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    """
+    Change the username for the current user.
+
+    - **new_username**: The new username to set for the user.
+    """
+
+    user = db.exec(select(User).where(User.id == current_user["user_id"])).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    # Check if the new username is already taken
+    existing_user = db.exec(select(User).where(User.username == new_username)).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Username already taken")
+
+    user.username = new_username
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    
+    return {"message": "Username changed successfully", "username": new_username}
