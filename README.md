@@ -72,4 +72,5 @@ graph LR
 ## Scrum Backlog:
 *Open issues are in progress, closed issues are completed. Issues are tagged with the relevant sprint and/or feature.*
 - [**Sprint 1**](https://github.com/VenkatCSClasses/project-2-group-2/milestone/1)
+- [**Sprint 1 Review**](https://docs.google.com/document/d/1z2bGQjv06aU-17aqmoSdHR2nd6OT3dNAeKe7ZxNtBM8/edit?usp=sharing)
 - [**Sprint 2**](https://github.com/VenkatCSClasses/project-2-group-2/milestone/2)
