@@ -93,7 +93,7 @@ async def get_item(item_id: str, db: Session = Depends(get_db)):
 
     item = get_or_404(db, FoodItem, item_id)
 
-    return {"item_id": item_id.value, "item_info": item}
+    return {"item_id": str(item_id), "item_info": item}
 
 
 @router.post("/{item_id}/review")
