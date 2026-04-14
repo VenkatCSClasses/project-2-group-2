@@ -1,0 +1,342 @@
+.feed-page {
+  position: relative;
+  background: white;
+  min-height: 100vh;
+  width: 100%;
+  padding: 0 16px 100px;
+}
+
+.feed-topbar {
+  display: grid;
+  grid-template-columns: 56px 1fr 56px;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.icon-button,
+.filter-button,
+.profile-button,
+.comment-button,
+.vote-button {
+  border: none;
+  background: white;
+  cursor: pointer;
+}
+
+.icon-button,
+.profile-button {
+  width: 56px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+.hamburger-icon {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 24px;
+}
+
+.hamburger-icon span {
+  display: block;
+  width: 24px;
+  height: 2.5px;
+  background: #111827;
+  border-radius: 999px;
+}
+
+.filter-button {
+  height: 46px;
+  width: 100%;
+  font-weight: 700;
+  color: #111827;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.profile-circle {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: white;
+  color: #111827;
+  font-size: 1.2rem;
+}
+
+.feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-top: 18px;
+}
+
+.feed-message {
+  text-align: center;
+  color: #6b7280;
+  margin-top: 24px;
+}
+
+.feed-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  padding: 14px;
+  overflow: hidden;
+}
+
+.feed-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.feed-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  flex: 0 0 46px;
+  display: grid;
+  place-items: center;
+  background: #f3f4f6;
+  color: #111827;
+  font-weight: 800;
+  font-size: 1rem;
+  border: 1px solid #e5e7eb;
+}
+
+.feed-user-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.feed-user-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.feed-username {
+  font-weight: 800;
+  font-size: 0.98rem;
+}
+
+.feed-time {
+  color: #6b7280;
+  font-size: 0.88rem;
+}
+
+.feed-rating-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 5px;
+}
+
+.feed-stars {
+  color: #f5b301;
+  font-size: 1rem;
+  letter-spacing: 1px;
+}
+
+.feed-rating-value {
+  font-weight: 700;
+  color: #111827;
+  font-size: 0.9rem;
+}
+
+.feed-item-name {
+  color: #6b7280;
+  font-size: 0.92rem;
+}
+
+.feed-review-text {
+  margin: 14px 2px 14px;
+  line-height: 1.6;
+  font-size: 0.98rem;
+  color: #111827;
+}
+
+.feed-image {
+  width: 100%;
+  display: block;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  object-fit: cover;
+  max-height: 440px;
+  background: #f3f4f6;
+}
+
+.feed-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.comment-button,
+.vote-button {
+  padding: 8px 10px;
+  font-weight: 600;
+  color: #111827;
+  font-size: 0.95rem;
+}
+
+.comment-button {
+  min-width: 88px;
+  text-align: left;
+}
+
+.vote-group {
+  display: flex;
+  gap: 8px;
+}
+
+.floating-add-button {
+  position: fixed;
+  right: 24px;
+  bottom: 12px;
+  border: none;
+  background: transparent;
+  color: black;
+  font-size: 4.4rem;
+  line-height: 1;
+  font-weight: 300;
+  cursor: pointer;
+  padding: 0;
+  width: auto;
+  height: auto;
+}
+
+@media (max-width: 640px) {
+  .feed-page {
+    padding: 0 12px 100px;
+  }
+
+  .feed-card {
+    border-radius: 16px;
+    padding: 12px;
+  }
+
+  .floating-add-button {
+    right: 18px;
+    bottom: 8px;
+    font-size: 4.5rem;
+  }
+}
+
+.menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.menu-drawer {
+  width: 33.333vw;
+  min-width: 320px;
+  max-width: 440px;
+  height: 100vh;
+  background: white;
+  border-right: 1px solid #e5e7eb;
+  padding: 20px 16px 24px;
+  overflow-y: auto;
+}
+
+.menu-drawer-header {
+  margin-bottom: 16px;
+}
+
+.menu-drawer-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #111827;
+}
+
+.menu-place-selector {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.menu-place-button {
+  border: 1px solid #d1d5db;
+  background: white;
+  color: #111827;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.menu-place-button.active {
+  background: #111827;
+  color: white;
+  border-color: #111827;
+}
+
+.menu-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.menu-status {
+  color: #6b7280;
+  margin: 8px 0;
+}
+
+.menu-item-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 12px;
+  background: white;
+}
+
+.menu-item-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.menu-item-top h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.menu-item-rating {
+  white-space: nowrap;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.menu-item-description {
+  margin: 8px 0 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: #6b7280;
+}
+
+@media (max-width: 900px) {
+  .menu-drawer {
+    width: 80vw;
+    min-width: 0;
+    max-width: none;
+  }
+}
