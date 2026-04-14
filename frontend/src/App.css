@@ -1,36 +1,116 @@
-main {
-  max-width: 700px;
-  margin: 0 auto;
-  padding: 2rem;
-  font-family: Arial, sans-serif;
+* {
+  box-sizing: border-box;
 }
 
-h1 {
-  margin-bottom: 1.5rem;
+:root {
+  --text: #18212f;
+  --muted: #6b7280;
+  --border: #e7ebf2;
+  --shadow: 0 10px 30px rgba(16, 24, 40, 0.08);
+  --accent: #10b981;
+  --accent-dark: #059669;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+  width: 100%;
+  font-family: Inter, Arial, sans-serif;
+  background: white;
+  color: var(--text);
+}
+
+body {
+  min-height: 100vh;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+main {
+  min-height: 100vh;
+}
+
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: white;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 520px;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 18px 16px 100px;
+  background: white;
+}
+
+.back-button {
+  border: 1px solid var(--border);
+  background: white;
+  color: var(--text);
+  border-radius: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: 0.2s ease;
+  margin-bottom: 16px;
 }
 
 form {
-  display: grid;
-  gap: 1rem;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-form div {
-  display: grid;
-  gap: 0.4rem;
+form input,
+form textarea,
+form select {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  outline: none;
+  background: #fbfcfe;
 }
 
-input,
-textarea,
-button {
-  font: inherit;
-  padding: 0.65rem;
+form input:focus,
+form textarea:focus,
+form select:focus {
+  border-color: #bcd2ff;
+  box-shadow: 0 0 0 4px rgba(66, 133, 244, 0.08);
 }
 
-textarea {
-  min-height: 120px;
-  resize: vertical;
-}
-
-button {
+form button {
+  border: none;
+  border-radius: 14px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
+  font-weight: 700;
   cursor: pointer;
+}
+
+.switch-mode-button {
+  margin-top: 12px;
+  border: none;
+  background: transparent;
+  color: #111827;
+  cursor: pointer;
+  padding: 0;
 }

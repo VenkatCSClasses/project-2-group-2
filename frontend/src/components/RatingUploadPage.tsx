@@ -1,9 +1,11 @@
 import { ChangeEvent, FormEvent, useMemo, useState } from 'react'
+import './RatingUploadPage.css'
 
 const API_BASE_URL = 'http://localhost:8000'
 
 type RatingUploadPageProps = {
   token: string
+  onBack: () => void
 }
 
 type FormDataState = {
@@ -75,18 +77,18 @@ function validateForm(
   } else {
     const numericRating = Number(formData.rating)
     if (
-      !Number.isInteger(numericRating) ||
-      numericRating < 1 ||
-      numericRating > 10
+      !Number.isFinite(numericRating) ||
+      numericRating < 0.5 ||
+      numericRating > 5
     ) {
-      errors.rating = 'Rating must be an integer between 1 and 10'
+      errors.rating = 'Rating must be between 0.5 and 5 stars'
     }
   }
 
   return errors
 }
 
-function RatingUploadPage({ token }: RatingUploadPageProps) {
+function RatingUploadPage({ token, onBack }: RatingUploadPageProps) {
   const [formData, setFormData] = useState<FormDataState>(initialFormState)
   const [errors, setErrors] = useState<FormErrors>({})
   const [submitMessage, setSubmitMessage] = useState('')
@@ -99,6 +101,8 @@ function RatingUploadPage({ token }: RatingUploadPageProps) {
 
   const [isSearchingPlaces, setIsSearchingPlaces] = useState(false)
   const [isLoadingMenu, setIsLoadingMenu] = useState(false)
+  const [showItemPicker, setShowItemPicker] = useState(false)
+  const [hoverRating, setHoverRating] = useState<number | null>(null)
 
   function handleChange(
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -115,6 +119,7 @@ function RatingUploadPage({ token }: RatingUploadPageProps) {
       setSelectedPlaceId('')
       setSelectedPlaceName('')
       setMenuItems([])
+      setShowItemPicker(false)
 
       setFormData((prev) => ({
         ...prev,
@@ -139,6 +144,32 @@ function RatingUploadPage({ token }: RatingUploadPageProps) {
       ...prev,
       image: file,
     }))
+  }
+
+  function handleStarClick(value: number) {
+    setFormData((prev) => ({
+      ...prev,
+      rating: value.toString(),
+    }))
+
+    setErrors((prev) => ({
+      ...prev,
+      rating: undefined,
+    }))
+  }
+
+  function getStarFill(starNumber: number) {
+    const activeValue = hoverRating ?? (Number(formData.rating) || 0)
+
+    if (activeValue >= starNumber) {
+      return 'full'
+    }
+
+    if (activeValue === starNumber - 0.5) {
+      return 'half'
+    }
+
+    return 'empty'
   }
 
   async function handleSearchPlaces() {
@@ -209,6 +240,7 @@ function RatingUploadPage({ token }: RatingUploadPageProps) {
     setSelectedPlaceId(place.id)
     setSelectedPlaceName(place.name)
     setPlaceResults([])
+    setShowItemPicker(true)
 
     setFormData((prev) => ({
       ...prev,
@@ -253,7 +285,6 @@ function RatingUploadPage({ token }: RatingUploadPageProps) {
 
       const placeInfoData = data as PlaceInfoResponse | null
       setMenuItems(placeInfoData?.place_info?.food_items ?? [])
-      setSubmitMessage(`Selected place: ${place.name}`)
     } catch (error) {
       console.error('place details fetch error:', error)
       setSubmitMessage('Network error while loading dining hall menu')
@@ -289,7 +320,7 @@ function RatingUploadPage({ token }: RatingUploadPageProps) {
       itemId: undefined,
     }))
 
-    setSubmitMessage(`Selected item: ${item.name}`)
+    setShowItemPicker(false)
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -358,6 +389,8 @@ function RatingUploadPage({ token }: RatingUploadPageProps) {
       setMenuItems([])
       setSelectedPlaceId('')
       setSelectedPlaceName('')
+      setShowItemPicker(false)
+      setHoverRating(null)
     } catch (error) {
       console.error('review submit fetch error:', error)
       setSubmitMessage('Network error while submitting review')
@@ -367,134 +400,204 @@ function RatingUploadPage({ token }: RatingUploadPageProps) {
   }
 
   return (
-    <section>
-      <h2>Upload Rating</h2>
-
-      <form onSubmit={handleSubmit} noValidate>
-        <div>
-          <label htmlFor="diningHall">Dining Hall</label>
-          <input
-            id="diningHall"
-            name="diningHall"
-            type="text"
-            value={formData.diningHall}
-            onChange={handleChange}
-            placeholder="Search for a dining hall"
-          />
-          <button
-            type="button"
-            onClick={handleSearchPlaces}
-            disabled={isSearchingPlaces}
-            style={{ marginLeft: '0.5rem' }}
-          >
-            {isSearchingPlaces ? 'Searching...' : 'Search Places'}
+    <section className="rating-page">
+      <div className="rating-card">
+        <div className="rating-header">
+          <button className="inline-back-button" type="button" onClick={onBack}>
+            ←
           </button>
-          {errors.diningHall && <p>{errors.diningHall}</p>}
+          <h2 className="rating-title">Upload Rating</h2>
         </div>
 
-        {placeResults.length > 0 && (
-          <div style={{ marginTop: '0.75rem', marginBottom: '1rem' }}>
-            <p>Select a dining hall:</p>
-            <ul>
-              {placeResults.map((place) => (
-                <li key={place.id} style={{ marginBottom: '0.5rem' }}>
-                  <button type="button" onClick={() => handleSelectPlace(place)}>
-                    {place.name}
-                  </button>
-                  {place.description ? <span> — {place.description}</span> : null}
-                </li>
-              ))}
-            </ul>
+        <form className="rating-form" onSubmit={handleSubmit} noValidate>
+          <div className="form-group">
+            <label htmlFor="diningHall">Dining Hall</label>
+
+            <div className="search-row">
+              <input
+                id="diningHall"
+                name="diningHall"
+                type="text"
+                value={formData.diningHall}
+                onChange={handleChange}
+                placeholder="Search for a dining hall"
+              />
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={handleSearchPlaces}
+                disabled={isSearchingPlaces}
+              >
+                {isSearchingPlaces ? 'Searching...' : 'Search'}
+              </button>
+            </div>
+
+            {errors.diningHall && <p className="field-error">{errors.diningHall}</p>}
           </div>
-        )}
 
-        {selectedPlaceName && (
-          <p>
-            Selected dining hall: <strong>{selectedPlaceName}</strong>
-          </p>
-        )}
+          {placeResults.length > 0 && (
+            <div className="result-box">
+              <p className="result-label">Select a dining hall</p>
+              <ul className="result-list">
+                {placeResults.map((place) => (
+                  <li key={place.id} className="result-item">
+                    <button
+                      type="button"
+                      className="result-button"
+                      onClick={() => handleSelectPlace(place)}
+                    >
+                      {place.name}
+                    </button>
+                    {place.description ? (
+                      <span className="result-description">{place.description}</span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
-        <div>
-          <label htmlFor="itemName">Food Item</label>
-          <input
-            id="itemName"
-            name="itemName"
-            type="text"
-            value={formData.itemName}
-            onChange={handleChange}
-            placeholder={
-              selectedPlaceId
-                ? 'Filter items from the selected dining hall'
-                : 'Select a dining hall first'
-            }
-            disabled={!selectedPlaceId}
-          />
-        </div>
+          {selectedPlaceName && (
+            <p className="selected-text">
+              Selected dining hall: <strong>{selectedPlaceName}</strong>
+            </p>
+          )}
 
-        {isLoadingMenu && <p>Loading menu...</p>}
-
-        {selectedPlaceId && !isLoadingMenu && filteredMenuItems.length > 0 && (
-          <div style={{ marginTop: '0.75rem', marginBottom: '1rem' }}>
-            <p>Select a food item:</p>
-            <ul>
-              {filteredMenuItems.map((item) => (
-                <li key={item.id} style={{ marginBottom: '0.5rem' }}>
-                  <button type="button" onClick={() => handleSelectItem(item)}>
-                    {item.name}
-                  </button>
-                  {item.description ? <span> — {item.description}</span> : null}
-                </li>
-              ))}
-            </ul>
+          <div className="form-group">
+            <label htmlFor="itemName">Food Item</label>
+            <input
+              id="itemName"
+              name="itemName"
+              type="text"
+              value={formData.itemName}
+              onChange={handleChange}
+              placeholder={
+                selectedPlaceId
+                  ? 'Filter items from the selected dining hall'
+                  : 'Select a dining hall first'
+              }
+              disabled={!selectedPlaceId}
+            />
+            {errors.itemId && <p className="field-error">{errors.itemId}</p>}
           </div>
-        )}
 
-        {selectedPlaceId && !isLoadingMenu && menuItems.length === 0 && (
-          <p>No menu items found for this dining hall.</p>
-        )}
+          {selectedPlaceId && formData.itemId && !showItemPicker && (
+            <div className="selected-item-row">
+              <p className="selected-text">
+                Selected food item: <strong>{formData.itemName}</strong>
+              </p>
+              <button
+                type="button"
+                className="change-item-button"
+                onClick={() => setShowItemPicker(true)}
+              >
+                Change food item
+              </button>
+            </div>
+          )}
 
-        <div>
-          <label htmlFor="rating">Rating</label>
-          <input
-            id="rating"
-            name="rating"
-            type="number"
-            min="1"
-            max="10"
-            step="1"
-            value={formData.rating}
-            onChange={handleChange}
-          />
-          {errors.rating && <p>{errors.rating}</p>}
-        </div>
+          {isLoadingMenu && <p className="helper-text">Loading menu...</p>}
 
-        <div>
-          <label htmlFor="description">Description</label>
-          <textarea
-            id="description"
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-          />
-        </div>
+          {selectedPlaceId &&
+            !isLoadingMenu &&
+            showItemPicker &&
+            filteredMenuItems.length > 0 && (
+              <div className="result-box">
+                <p className="result-label">
+                  {formData.itemId ? 'Change food item' : 'Select a food item'}
+                </p>
+                <ul className="result-list">
+                  {filteredMenuItems.map((item) => (
+                    <li key={item.id} className="result-item">
+                      <button
+                        type="button"
+                        className="result-button"
+                        onClick={() => handleSelectItem(item)}
+                      >
+                        {item.name}
+                      </button>
+                      {item.description ? (
+                        <span className="result-description">
+                          {item.description}
+                        </span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
-        <div>
-          <label htmlFor="image">Image</label>
-          <input
-            id="image"
-            name="image"
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-          />
-        </div>
+          {selectedPlaceId && !isLoadingMenu && menuItems.length === 0 && (
+            <p className="helper-text">No menu items found for this dining hall.</p>
+          )}
 
-        <button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Submitting...' : 'Submit'}
-        </button>
-      </form>
+          <div className="form-group rating-group">
+            <label className="center-label">Rating</label>
 
-      {submitMessage && <p>{submitMessage}</p>}
+            <div className="star-rating" onMouseLeave={() => setHoverRating(null)}>
+              {[1, 2, 3, 4, 5].map((starNumber) => {
+                const fillType = getStarFill(starNumber)
+
+                return (
+                  <div key={starNumber} className="star-wrapper">
+                    <button
+                      type="button"
+                      className="star-half left-half"
+                      onMouseEnter={() => setHoverRating(starNumber - 0.5)}
+                      onClick={() => handleStarClick(starNumber - 0.5)}
+                      aria-label={`Rate ${starNumber - 0.5} stars`}
+                    />
+                    <button
+                      type="button"
+                      className="star-half right-half"
+                      onMouseEnter={() => setHoverRating(starNumber)}
+                      onClick={() => handleStarClick(starNumber)}
+                      aria-label={`Rate ${starNumber} stars`}
+                    />
+                    <span className={`star-display ${fillType}`}>★</span>
+                  </div>
+                )
+              })}
+            </div>
+
+            <p className="rating-value">
+              {formData.rating ? `${formData.rating} / 5` : 'Select a rating'}
+            </p>
+
+            {errors.rating && <p className="field-error">{errors.rating}</p>}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="description">Description</label>
+            <textarea
+              id="description"
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              placeholder="Write a short review"
+              rows={5}
+            />
+          </div>
+
+          <div className="form-group file-group">
+            <label htmlFor="image" className="center-label">Image</label>
+            <input
+              className="file-input"
+              id="image"
+              name="image"
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+            />
+          </div>
+
+          <button className="submit-button" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Submitting...' : 'Submit Rating'}
+          </button>
+        </form>
+
+        {submitMessage && <p className="submit-message">{submitMessage}</p>}
+      </div>
     </section>
   )
 }
