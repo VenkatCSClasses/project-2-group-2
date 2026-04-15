@@ -1,28 +1,68 @@
 services:
-  # backend:
-  #   build:
-  #     context: ./backend
-  #     dockerfile: Dockerfile
-  #   working_dir: /app
-  #   command: uv run fastapi dev main.py --host 0.0.0.0 --port 8000
-  #   ports:
-  #     - "8000:8000"
-  #   environment:
-  #     - UV_PROJECT_ENVIRONMENT=/app/.venv
-  #   volumes:
-  #     - ./backend:/app
-  #     - venv:/app/.venv
+  backend:
+    profiles: ["app"]
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    working_dir: /app
+    command: uv run fastapi run main.py --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      - UV_PROJECT_ENVIRONMENT=/app/.venv
+      - DATABASE_URL=postgresql://postgres:gloorp@database:5432/food_db
+    env_file:
+      - path: ./default.env
+        required: true
+      - path: ./.env
+        required: false # Optional (but recommended for production): This allows you to override defaults with a local .env file
+    volumes:
+      - ./backend:/app
+      - venv:/app/.venv
+    depends_on:
+      database:
+        condition: service_healthy
+      valkey_cache:
+        condition: service_healthy
+
+  frontend:
+    profiles: ["app"]
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    working_dir: /usr/src/app
+    ports:
+      - "5173:5173"
+    env_file:
+      - path: ./default.env
+        required: true
+      - path: ./.env
+        required: false # Optional (but recommended for production): This allows you to override defaults with a local .env file
+    volumes:
+      - ./frontend:/usr/src/app
+      - venv:/usr/src/app/.venv
+    depends_on:
+      database:
+        condition: service_healthy
+
   database:
     image: postgres:latest
     restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: gloorp
-      POSTGRES_DB: food_db
+    env_file:
+      - path: ./default.env
+        required: true
+      - path: ./.env
+        required: false # Optional (but recommended for production): This allows you to override defaults with a local .env file
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d food_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   valkey_cache:
     image: valkey/valkey:latest
@@ -31,6 +71,17 @@ services:
       - "6379:6379"
     volumes:
       - valkey_data:/data
+    # Optional: You can do the same for Valkey
+    env_file:
+      - path: ./default.env
+        required: true
+      - path: ./.env
+        required: false
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
 volumes:
   postgres_data:
