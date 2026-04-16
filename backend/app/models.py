@@ -1,9 +1,9 @@
 # ruff: noqa (disable linting for this file)
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import List, Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, Enum, String, UniqueConstraint
+from sqlalchemy import Boolean, CheckConstraint, Column, Date, DateTime, Enum, String, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.schemas import UserRole
@@ -38,12 +38,16 @@ class User(SQLModel, table=True):
 
 class FoodItem(SQLModel, table=True):
     __tablename__ = "food_items"  # type: ignore[assignment]
+    __table_args__ = (
+        UniqueConstraint("name", "food_place_id", "menu_date", name="uq_food_items_name_place_menu_date"),
+    )
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
-    name: str = Field(sa_type=String(100), unique=True, index=True)
+    name: str = Field(sa_type=String(100), index=True)
     description: Optional[str] = Field(default=None, sa_type=String(256))
     image_url: Optional[str] = Field(default=None)
     average_rating: Optional[int] = Field(default=None, ge=1, le=10)  # 1-10 (each int represents a half star, so 10 = 5 stars, 9 = 4.5 stars, etc)
+    menu_date: date = Field(sa_column=Column(Date, nullable=False, index=True))
     
     reviews: List["Review"] = Relationship(back_populates="food_item", cascade_delete=True)
     food_place_id: Optional[UUID] = Field(default=None, foreign_key="food_places.id")

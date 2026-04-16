@@ -37,10 +37,12 @@ def on_startup():
     """
     SQLModel.metadata.create_all(engine)
     ensure_admin_user_in_db(Session(engine)) # Create an admin account if doesn't exist
-    
+
     def _run_daily_menu_population() -> None:
         with Session(engine) as db:
             populate_day(db)
+
+    _run_daily_menu_population()
 
     scheduler.add_job(
         _run_daily_menu_population,
