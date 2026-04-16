@@ -1,4 +1,5 @@
 import logging
+from datetime import date, datetime
 from typing import Any
 from uuid import UUID
 from sqlmodel import Session, select
@@ -9,22 +10,55 @@ from app.nutrislice.api import get_terrace_and_cc_menus
 logger = logging.getLogger(__name__)
 
 
+def _parse_menu_date(raw_value: Any) -> date | None:
+    if not raw_value:
+        return None
+    if isinstance(raw_value, datetime):
+        return raw_value.date()
+    if isinstance(raw_value, date):
+        return raw_value
+    if isinstance(raw_value, str):
+        normalized = raw_value.replace("Z", "+00:00")
+        try:
+            return datetime.fromisoformat(normalized).date()
+        except ValueError:
+            pass
+        for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%m/%d/%Y"):
+            try:
+                return datetime.strptime(raw_value, fmt).date()
+            except ValueError:
+                continue
+    return None
+
+
 def populate_food_items(db: Session, menu_data: dict[str, Any], place_id: UUID) -> None:
-    seen_names: set[str] = set()
+    seen_keys: set[tuple[str, date]] = set()
 
     for day in menu_data.get("days", []):
+        menu_date = _parse_menu_date(day.get("date"))
+        if menu_date is None:
+            logger.warning("Skipping menu day with missing or invalid date: %s", day.get("date"))
+            continue
+
         for menu_item in day.get("menu_items", []):
             food = menu_item.get("food", None)
             if food is not None:
                 name = food.get("name")
-                if not name or name in seen_names:
+                seen_key = (name, menu_date)
+                if not name or seen_key in seen_keys:
                     continue
 
-                seen_names.add(name)
+                seen_keys.add(seen_key)
                 description = food.get("description") or None
                 image_url = food.get("image_url") or None
 
-                existing_item = db.exec(select(FoodItem).where(FoodItem.name == name)).first()
+                existing_item = db.exec(
+                    select(FoodItem).where(
+                        FoodItem.name == name,
+                        FoodItem.food_place_id == place_id,
+                        FoodItem.menu_date == menu_date,
+                    )
+                ).first()
                 if existing_item:
                     updated = False
                     if not existing_item.description and description:
@@ -32,9 +66,6 @@ def populate_food_items(db: Session, menu_data: dict[str, Any], place_id: UUID) 
                         updated = True
                     if not existing_item.image_url and image_url:
                         existing_item.image_url = image_url
-                        updated = True
-                    if existing_item.food_place_id is None:
-                        existing_item.food_place_id = place_id
                         updated = True
                     if updated:
                         db.add(existing_item)
@@ -45,6 +76,7 @@ def populate_food_items(db: Session, menu_data: dict[str, Any], place_id: UUID) 
                     description=description,
                     image_url=image_url,
                     food_place_id=place_id,
+                    menu_date=menu_date,
                 )
                 db.add(new_food_item)
 

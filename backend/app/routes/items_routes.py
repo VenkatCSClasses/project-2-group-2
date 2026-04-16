@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from app.schemas import ReviewForm, FoodItemCreateForm
 from app.utils import get_current_user, get_current_admin, process_and_save_image
 from app.routes.helpers import get_or_404, parse_uuid
@@ -10,6 +13,13 @@ from sqlalchemy import or_
 
 # This will be mounted at "/items" in main.py, so all routes here will be prefixed with /items
 router = APIRouter()
+EASTERN_TIMEZONE = ZoneInfo("America/New_York")
+
+
+def get_requested_menu_date(requested_date: date | None) -> date:
+    if requested_date is not None:
+        return requested_date
+    return datetime.now(EASTERN_TIMEZONE).date()
 
 def calculate_average_rating(reviews: list[Review]) -> float:
     if not reviews:
@@ -19,7 +29,7 @@ def calculate_average_rating(reviews: list[Review]) -> float:
     return round(raw_average) # Round to nearest integer to fit our 1-10 scale
 
 @router.get("/")
-async def get_items(start: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+async def get_items(start: int = 0, limit: int = 10, requested_date: date | None = Query(default=None, alias="date"), db: Session = Depends(get_db)):
     """
     Get a list of food items.
 
@@ -27,6 +37,7 @@ async def get_items(start: int = 0, limit: int = 10, db: Session = Depends(get_d
 
     - **start**: The starting index for pagination (default is 0).
     - **limit**: The maximum number of items to return (default is 10).
+    - **date**: The menu date to filter by in YYYY-MM-DD format. Defaults to today in America/New_York.
     """
     if limit > 100:
         limit = 100  # Cap the limit to prevent abuse
@@ -35,24 +46,35 @@ async def get_items(start: int = 0, limit: int = 10, db: Session = Depends(get_d
     if start < 0:
         start = 0  # Default to 0 if an invalid start is provided
 
-    items_query = db.query(FoodItem).offset(start).limit(limit)
+    menu_date = get_requested_menu_date(requested_date)
+    items_query = (
+        db.query(FoodItem)
+        .filter(FoodItem.menu_date == menu_date)
+        .offset(start)
+        .limit(limit)
+    )
     results = items_query.all()
-    return {"start": start, "limit": limit, "items": results}
+    return {"start": start, "limit": limit, "date": menu_date, "items": results}
 
 
 @router.get("/search")
-async def search_items(query: str, db: Session = Depends(get_db)):
+async def search_items(query: str, requested_date: date | None = Query(default=None, alias="date"), db: Session = Depends(get_db)):
     """
     Search for food items.
 
     This endpoint allows users to search for food items based on a query string and optional category filter.
 
     - **query**: The search query for finding food items.
+    - **date**: The menu date to filter by in YYYY-MM-DD format. Defaults to today in America/New_York.
     """
 
-    q = db.query(FoodItem).filter(or_(FoodItem.name.ilike(f"%{query}%"), FoodItem.description.ilike(f"%{query}%")))
+    menu_date = get_requested_menu_date(requested_date)
+    q = db.query(FoodItem).filter(
+        FoodItem.menu_date == menu_date,
+        or_(FoodItem.name.ilike(f"%{query}%"), FoodItem.description.ilike(f"%{query}%")),
+    )
     results = q.all()
-    return {"query": query, "results": results, "count": len(results)}
+    return {"query": query, "date": menu_date, "results": results, "count": len(results)}
 
 
 @router.post("/create")
@@ -62,11 +84,21 @@ async def create_item(item: FoodItemCreateForm = Depends(), db: Session = Depend
 
     - **item**: The food item data to create.
     """
-    if db.query(FoodItem).filter(FoodItem.name == item.name).first():
+    menu_date = datetime.now(EASTERN_TIMEZONE).date()
+    existing_item = db.query(FoodItem).filter(
+        FoodItem.name == item.name,
+        FoodItem.menu_date == menu_date,
+        FoodItem.food_place_id.is_(None),
+    ).first()
+    if existing_item:
         raise HTTPException(status_code=400, detail="Item with this name already exists")
-    
+
     try:
-        new_item = FoodItem(name=item.name, description=item.description)
+        new_item = FoodItem(
+            name=item.name,
+            description=item.description,
+            menu_date=menu_date,
+        )
         db.add(new_item)
         db.commit()
         db.refresh(new_item)
@@ -113,13 +145,13 @@ async def review_item(request: Request, item_id: str, form: ReviewForm = Depends
 
     item = get_or_404(db, FoodItem, item_id)
     user = get_or_404(db, User, current_user["user_id"])
-    
+
     image = form.image
 
     image_path = None
     if image:
         image_path = process_and_save_image(image.file.read(), username=user.username)
-    
+
 
     try:
         review = Review(
