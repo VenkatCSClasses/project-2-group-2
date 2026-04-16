@@ -96,12 +96,13 @@ def get_current_admin(current_user: dict = Depends(get_current_user)):
     return current_user
 
 
-def process_and_save_image(file_content: bytes, username: str = None) -> str:
+def process_and_save_image(file_content: bytes, username: str = None, max_size: tuple = (1920, 1920)) -> str:
     """
     Process and save an image file.
 
     file_content: The content of the image file.
     username: The username of the user uploading the image.
+    max_size: The maximum width and height for the resized image.
 
     returns: The path to the saved image file.
     """
@@ -112,7 +113,6 @@ def process_and_save_image(file_content: bytes, username: str = None) -> str:
         img = img.convert("RGB")
     
     # Resize images to save storage for large uploads
-    max_size = (1920, 1920) # Max width and height
     img.thumbnail(max_size, Image.Resampling.LANCZOS)
 
     exif_data = img.getexif()
