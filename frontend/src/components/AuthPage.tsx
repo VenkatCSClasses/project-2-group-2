@@ -98,12 +98,6 @@ function AuthPage({ onAuthSuccess }: AuthPageProps) {
           </button>
         </form>
 
-        {mode === 'login' && (
-          <button type="button" className="forgot-button">
-            Forgot password/username?
-          </button>
-        )}
-
         {message && <p className="auth-message">{message}</p>}
       </div>
     </main>
