@@ -25,7 +25,11 @@ async def get_accounts(start: int = 0, limit: int = 10, db: Session = Depends(ge
         "start": start,
         "limit": limit,
         "accounts": [
-            {"username": user.username, "email": user.email, "role": user.role.value}
+            {"username": user.username, 
+            "email": user.email, 
+            "role": user.role.value, 
+            "profile_picture": user.profile_image_url
+            }
             for user in users
         ],
     }
@@ -94,7 +98,7 @@ async def get_account(username: str, db: Session = Depends(get_db)):
     return {
         "message": "Account retrieved successfully",
         "username": username,
-        "account_info": {"email": user.email, "role": user.role.value},
+        "account_info": {"email": user.email, "role": user.role.value, "profile_picture": user.profile_image_url},
     }
 
 

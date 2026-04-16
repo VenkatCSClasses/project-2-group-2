@@ -1,13 +1,13 @@
 import os
 from datetime import datetime, timedelta
 from fastapi import APIRouter
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, UploadFile
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from typing import Annotated
 from app.database import get_db
 from app.models import User
 from argon2 import PasswordHasher
-from app.utils import get_current_user
+from app.utils import get_current_user, process_and_save_image
 import jwt
 from app.schemas import RegisterForm, UserRole, ChangePasswordForm
 from sqlmodel import Session, select
@@ -51,17 +51,28 @@ def login_user(db, username: str, password_str: str):
 
 
 
-def register_user(db, username: str, password_str: str, email: str):
+def register_user(db, username: str, password_str: str, email: str, image: UploadFile = None):
     # Check if the username is already taken
     existing_user = db.exec(select(User).where(User.username == username)).first()
     if existing_user:
         raise ValueError("Username already taken")
+    existing_email = db.exec(select(User).where(User.email == email)).first()
+    if existing_email:
+        raise ValueError("Email already registered")
     
+    # Process the image if provided
+    image_path = None
+    if image:
+        try:
+            image_path = process_and_save_image(image.file.read(), max_size=(512, 512))
+        except Exception as e:
+            raise ValueError("Error processing profile image") from e
+
     # Hash the password
     password_hash = ph.hash(password_str)
     
     # Create the user
-    new_user = User(username=username, password_hash=password_hash, email=email)
+    new_user = User(username=username, password_hash=password_hash, email=email, profile_image_url=image_path)
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
@@ -112,7 +123,7 @@ async def register(form_data: Annotated[RegisterForm, Depends()], db: Session = 
     - **db**: The database session.
     """
     try:
-        token = register_user(db, form_data.username, form_data.password, form_data.email)
+        token = register_user(db, form_data.username, form_data.password, form_data.email, form_data.profile_picture)
         return {
             "message": "User registered successfully", 
             "access_token": token, 
