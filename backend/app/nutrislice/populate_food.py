@@ -1,13 +1,28 @@
 import logging
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any
 from uuid import UUID
+
 from sqlmodel import Session, select
+
 from app.models import FoodItem, FoodPlace
 from app.nutrislice.api import get_terrace_and_cc_menus
 
 
 logger = logging.getLogger(__name__)
+
+
+def get_latest_menu_date(db: Session) -> date | None:
+    return db.exec(
+        select(FoodItem.menu_date).order_by(FoodItem.menu_date.desc())
+    ).first()
+
+
+def menu_items_exist_for_date(db: Session, target_date: date) -> bool:
+    return (
+        db.exec(select(FoodItem.id).where(FoodItem.menu_date == target_date)).first()
+        is not None
+    )
 
 
 def _parse_menu_date(raw_value: Any) -> date | None:
@@ -107,3 +122,22 @@ def populate_day(db: Session, day: int = 0) -> None:
     except Exception:
         db.rollback()
         raise
+
+
+def populate_missing_menu_days(db: Session) -> None:
+    today = date.today()
+    yesterday = today - timedelta(days=1)
+    latest_menu_date = get_latest_menu_date(db)
+
+    candidate_dates = {yesterday, today}
+    if latest_menu_date is not None:
+        next_missing_date = latest_menu_date + timedelta(days=1)
+        if next_missing_date <= today:
+            candidate_dates.update(
+                next_missing_date + timedelta(days=offset)
+                for offset in range((today - next_missing_date).days + 1)
+            )
+
+    for target_date in sorted(candidate_dates):
+        if not menu_items_exist_for_date(db, target_date):
+            populate_day(db, (target_date - today).days)

@@ -6,7 +6,7 @@ from sqlmodel import SQLModel, Session
 from app.utils import ensure_admin_user_in_db
 
 import app.models
-from app.nutrislice.populate_food import populate_day
+from app.nutrislice.populate_food import populate_day, populate_missing_menu_days
 from app.database import engine
 from app.routes import router as api_router
 
@@ -42,7 +42,8 @@ def on_startup():
         with Session(engine) as db:
             populate_day(db)
 
-    _run_daily_menu_population()
+    with Session(engine) as db:
+        populate_missing_menu_days(db)
 
     scheduler.add_job(
         _run_daily_menu_population,
