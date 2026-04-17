@@ -202,10 +202,46 @@
   gap: 8px;
 }
 
-.floating-add-button {
+.floating-add-wrapper {
   position: fixed;
   right: 24px;
   bottom: 12px;
+  z-index: 1000;
+}
+
+.upload-choice-popup {
+  position: absolute;
+  right: 72px;
+  bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 170px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+
+.upload-choice-button {
+  border: none;
+  background: white;
+  color: #111827;
+  padding: 10px 12px;
+  border-radius: 10px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.upload-choice-button:hover {
+  background: #f3f4f6;
+}
+
+.floating-add-button {
+  position: relative;
   border: none;
   background: transparent;
   color: black;
@@ -216,6 +252,7 @@
   padding: 0;
   width: auto;
   height: auto;
+  z-index: 1001;
 }
 
 @media (max-width: 640px) {
@@ -228,10 +265,19 @@
     padding: 12px;
   }
 
-  .floating-add-button {
+  .floating-add-wrapper {
     right: 18px;
     bottom: 8px;
+  }
+
+  .floating-add-button {
     font-size: 4.5rem;
+  }
+
+  .upload-choice-popup {
+    right: 64px;
+    bottom: 14px;
+    min-width: 155px;
   }
 }
 
@@ -339,4 +385,14 @@
     min-width: 0;
     max-width: none;
   }
+}
+
+.menu-item-button {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-item-button:hover {
+  background: #f9fafb;
 }

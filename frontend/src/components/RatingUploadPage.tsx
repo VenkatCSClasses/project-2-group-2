@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useMemo, useState } from 'react'
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react'
 import './RatingUploadPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
@@ -6,6 +6,9 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
 type RatingUploadPageProps = {
   token: string
   onBack: () => void
+  initialDiningHall?: string
+  initialItemId?: string
+  initialItemName?: string
 }
 
 type FormDataState = {
@@ -88,8 +91,19 @@ function validateForm(
   return errors
 }
 
-function RatingUploadPage({ token, onBack }: RatingUploadPageProps) {
-  const [formData, setFormData] = useState<FormDataState>(initialFormState)
+function RatingUploadPage({
+  token,
+  onBack,
+  initialDiningHall = '',
+  initialItemId = '',
+  initialItemName = '',
+}: RatingUploadPageProps) {
+  const [formData, setFormData] = useState<FormDataState>({
+    ...initialFormState,
+    diningHall: initialDiningHall,
+    itemId: initialItemId,
+    itemName: initialItemName,
+  })
   const [errors, setErrors] = useState<FormErrors>({})
   const [submitMessage, setSubmitMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -103,6 +117,15 @@ function RatingUploadPage({ token, onBack }: RatingUploadPageProps) {
   const [isLoadingMenu, setIsLoadingMenu] = useState(false)
   const [showItemPicker, setShowItemPicker] = useState(false)
   const [hoverRating, setHoverRating] = useState<number | null>(null)
+
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      diningHall: initialDiningHall,
+      itemId: initialItemId,
+      itemName: initialItemName,
+    }))
+  }, [initialDiningHall, initialItemId, initialItemName])
 
   function handleChange(
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -172,68 +195,6 @@ function RatingUploadPage({ token, onBack }: RatingUploadPageProps) {
     return 'empty'
   }
 
-  async function handleSearchPlaces() {
-    setSubmitMessage('')
-    setPlaceResults([])
-
-    if (!formData.diningHall.trim()) {
-      setSubmitMessage('Enter a dining hall name to search')
-      return
-    }
-
-    setIsSearchingPlaces(true)
-
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/places/search?query=${encodeURIComponent(formData.diningHall)}`
-      )
-
-      const rawText = await response.text()
-      let data: unknown = null
-
-      try {
-        data = rawText ? JSON.parse(rawText) : null
-      } catch (parseError) {
-        console.error('places/search parse error:', parseError, rawText)
-        setSubmitMessage('Search returned an invalid response from the server')
-        return
-      }
-
-      if (!response.ok) {
-        const errorData = data as { detail?: string; message?: string } | null
-        setSubmitMessage(
-          errorData?.detail ||
-            errorData?.message ||
-            'Failed to search places'
-        )
-        return
-      }
-
-      let results: PlaceResult[] = []
-
-      if (Array.isArray(data)) {
-        results = data as PlaceResult[]
-      } else if (
-        data &&
-        typeof data === 'object' &&
-        Array.isArray((data as { results?: unknown[] }).results)
-      ) {
-        results = (data as { results: PlaceResult[] }).results
-      }
-
-      setPlaceResults(results)
-
-      if (results.length === 0) {
-        setSubmitMessage('No dining halls found')
-      }
-    } catch (error) {
-      console.error('places/search fetch error:', error)
-      setSubmitMessage('Network error while searching places')
-    } finally {
-      setIsSearchingPlaces(false)
-    }
-  }
-
   async function handleSelectPlace(place: PlaceResult) {
     setSubmitMessage('')
     setIsLoadingMenu(true)
@@ -245,8 +206,6 @@ function RatingUploadPage({ token, onBack }: RatingUploadPageProps) {
     setFormData((prev) => ({
       ...prev,
       diningHall: place.name,
-      itemId: '',
-      itemName: '',
     }))
 
     setErrors((prev) => ({
@@ -265,8 +224,7 @@ function RatingUploadPage({ token, onBack }: RatingUploadPageProps) {
 
       try {
         data = rawText ? JSON.parse(rawText) : null
-      } catch (parseError) {
-        console.error('place details parse error:', parseError, rawText)
+      } catch {
         setSubmitMessage('Dining hall menu returned an invalid response')
         setMenuItems([])
         return
@@ -284,7 +242,34 @@ function RatingUploadPage({ token, onBack }: RatingUploadPageProps) {
       }
 
       const placeInfoData = data as PlaceInfoResponse | null
-      setMenuItems(placeInfoData?.place_info?.food_items ?? [])
+      const items = placeInfoData?.place_info?.food_items ?? []
+      setMenuItems(items)
+
+      if (initialItemId || initialItemName) {
+        const matchedItem =
+          items.find((item) => item.id === initialItemId) ||
+          items.find(
+            (item) =>
+              item.name.trim().toLowerCase() ===
+              initialItemName.trim().toLowerCase()
+          )
+
+        if (matchedItem) {
+          setFormData((prev) => ({
+            ...prev,
+            itemId: matchedItem.id,
+            itemName: matchedItem.name,
+          }))
+          setShowItemPicker(false)
+        } else {
+          setFormData((prev) => ({
+            ...prev,
+            itemId: '',
+            itemName: initialItemName,
+          }))
+          setShowItemPicker(true)
+        }
+      }
     } catch (error) {
       console.error('place details fetch error:', error)
       setSubmitMessage('Network error while loading dining hall menu')
@@ -293,6 +278,47 @@ function RatingUploadPage({ token, onBack }: RatingUploadPageProps) {
       setIsLoadingMenu(false)
     }
   }
+
+  useEffect(() => {
+    async function preloadDiningHall() {
+      if (!initialDiningHall.trim()) return
+
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/places/search?query=${encodeURIComponent(initialDiningHall)}`
+        )
+
+        const rawText = await response.text()
+        const data: unknown = rawText ? JSON.parse(rawText) : null
+
+        let results: PlaceResult[] = []
+
+        if (Array.isArray(data)) {
+          results = data as PlaceResult[]
+        } else if (
+          data &&
+          typeof data === 'object' &&
+          Array.isArray((data as { results?: unknown[] }).results)
+        ) {
+          results = (data as { results: PlaceResult[] }).results
+        }
+
+        const exactMatch =
+          results.find(
+            (place) =>
+              place.name.toLowerCase() === initialDiningHall.toLowerCase()
+          ) ?? results[0]
+
+        if (exactMatch) {
+          await handleSelectPlace(exactMatch)
+        }
+      } catch (error) {
+        console.error('preload dining hall error:', error)
+      }
+    }
+
+    void preloadDiningHall()
+  }, [initialDiningHall, initialItemId, initialItemName])
 
   const filteredMenuItems = useMemo(() => {
     const query = formData.itemName.trim().toLowerCase()
@@ -366,8 +392,7 @@ function RatingUploadPage({ token, onBack }: RatingUploadPageProps) {
 
       try {
         data = rawText ? JSON.parse(rawText) : null
-      } catch (parseError) {
-        console.error('review submit parse error:', parseError, rawText)
+      } catch {
         setSubmitMessage('Submit returned an invalid response from the server')
         return
       }
@@ -383,7 +408,12 @@ function RatingUploadPage({ token, onBack }: RatingUploadPageProps) {
       }
 
       setSubmitMessage('Review submitted successfully')
-      setFormData(initialFormState)
+      setFormData({
+        ...initialFormState,
+        diningHall: initialDiningHall,
+        itemId: '',
+        itemName: '',
+      })
       setErrors({})
       setPlaceResults([])
       setMenuItems([])
@@ -422,40 +452,10 @@ function RatingUploadPage({ token, onBack }: RatingUploadPageProps) {
                 onChange={handleChange}
                 placeholder="Search for a dining hall"
               />
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={handleSearchPlaces}
-                disabled={isSearchingPlaces}
-              >
-                {isSearchingPlaces ? 'Searching...' : 'Search'}
-              </button>
             </div>
 
             {errors.diningHall && <p className="field-error">{errors.diningHall}</p>}
           </div>
-
-          {placeResults.length > 0 && (
-            <div className="result-box">
-              <p className="result-label">Select a dining hall</p>
-              <ul className="result-list">
-                {placeResults.map((place) => (
-                  <li key={place.id} className="result-item">
-                    <button
-                      type="button"
-                      className="result-button"
-                      onClick={() => handleSelectPlace(place)}
-                    >
-                      {place.name}
-                    </button>
-                    {place.description ? (
-                      <span className="result-description">{place.description}</span>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
 
           {selectedPlaceName && (
             <p className="selected-text">
@@ -534,7 +534,10 @@ function RatingUploadPage({ token, onBack }: RatingUploadPageProps) {
           <div className="form-group rating-group">
             <label className="center-label">Rating</label>
 
-            <div className="star-rating" onMouseLeave={() => setHoverRating(null)}>
+            <div
+              className="star-rating"
+              onMouseLeave={() => setHoverRating(null)}
+            >
               {[1, 2, 3, 4, 5].map((starNumber) => {
                 const fillType = getStarFill(starNumber)
 
@@ -580,7 +583,9 @@ function RatingUploadPage({ token, onBack }: RatingUploadPageProps) {
           </div>
 
           <div className="form-group file-group">
-            <label htmlFor="image" className="center-label">Image</label>
+            <label htmlFor="image" className="center-label">
+              Image
+            </label>
             <input
               className="file-input"
               id="image"
@@ -591,7 +596,11 @@ function RatingUploadPage({ token, onBack }: RatingUploadPageProps) {
             />
           </div>
 
-          <button className="submit-button" type="submit" disabled={isSubmitting}>
+          <button
+            className="submit-button"
+            type="submit"
+            disabled={isSubmitting}
+          >
             {isSubmitting ? 'Submitting...' : 'Submit Rating'}
           </button>
         </form>

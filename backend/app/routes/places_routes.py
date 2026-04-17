@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException
 from app.schemas import FoodPlaceCreateForm
 from app.database import get_db
@@ -7,8 +9,6 @@ from uuid import UUID
 from app.utils import get_current_admin
 from sqlalchemy import or_
 
-
-# This will be mounted at "/places" in main.py, so all routes here will be prefixed with /places
 router = APIRouter()
 
 
@@ -20,53 +20,41 @@ def get_place_by_name_or_id(db: Session, place_name: str):
         place = db.query(FoodPlace).filter(FoodPlace.name == place_name).first()
     return place
 
+
 @router.get("/")
 async def get_places(start: int = 0, limit: int = 10, db: Session = Depends(get_db)):
-    """
-    Get a list of places (like dining halls).
-
-    This endpoint retrieves a list of food places with pagination. 
-
-    - **start**: The starting index for pagination (default is 0).
-    - **limit**: The maximum number of places to return (default is 10).
-    """
     if limit > 100:
-        limit = 100  # Cap the limit to prevent abuse
+        limit = 100
     if limit < 1:
-        limit = 10  # Default to 10 if an invalid limit is provided
+        limit = 10
     if start < 0:
-        start = 0  # Default to 0 if an invalid start is provided
+        start = 0
 
     place_query = db.query(FoodPlace).offset(start).limit(limit)
     results = place_query.all()
 
-
     return {"start": start, "limit": limit, "places": results}
-    
+
 
 @router.get("/search")
 async def search_places(query: str, category: str = None, db: Session = Depends(get_db)):
-    """
-    Search for places (like dining halls).
-
-    This endpoint allows users to search for food places based on a query string and optional category filter.
-
-    - **query**: The search query for finding food places.
-    - **category**: The category to filter by (optional).
-    """
-
-    q = db.query(FoodPlace).filter(or_(FoodPlace.name.ilike(f"%{query}%"), FoodPlace.description.ilike(f"%{query}%")))
+    q = db.query(FoodPlace).filter(
+        or_(
+            FoodPlace.name.ilike(f"%{query}%"),
+            FoodPlace.description.ilike(f"%{query}%")
+        )
+    )
     results = q.all()
 
     return {"query": query, "category": category, "results": results, "count": len(results)}
 
 
 @router.post("/create")
-async def create_place(place: FoodPlaceCreateForm = Depends(), db: Session = Depends(get_db), current_admin: dict = Depends(get_current_admin)):
-    """
-    Create a new food place.
-    - **place**: The food place data to create.
-    """
+async def create_place(
+    place: FoodPlaceCreateForm = Depends(),
+    db: Session = Depends(get_db),
+    current_admin: dict = Depends(get_current_admin)
+):
     if db.query(FoodPlace).filter(FoodPlace.name == place.name).first():
         raise HTTPException(status_code=400, detail="Place with this name already exists")
 
@@ -78,39 +66,41 @@ async def create_place(place: FoodPlaceCreateForm = Depends(), db: Session = Dep
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail="Error creating place") from e
+
     return {"message": "Place created successfully", "place": new_place}
 
 
 @router.get("/{place_name}")
 async def get_place(place_name: str, db: Session = Depends(get_db)):
-    """
-    Get information about a place (like a dining hall).
-
-    This endpoint retrieves information about a specific food place, including its menu.
-
-    - **place_name**: The name of the place to retrieve.
-    """
-
     place = get_place_by_name_or_id(db, place_name)
 
     if not place:
         raise HTTPException(status_code=404, detail="Place not found")
 
+    today = date.today()
+
+    today_food_items = (
+        db.query(FoodItem)
+        .filter(
+            FoodItem.food_place_id == place.id,
+            FoodItem.menu_date == today
+        )
+        .all()
+    )
+
     place_info = place.dict()
-    place_info["food_items"] = place.food_items  # Include the menu items in the response
+    place_info["food_items"] = today_food_items
 
     return {"place_id": place.id, "place_info": place_info}
 
 
 @router.post("/{place_name}/add-item")
-async def add_item_to_place(place_name: str, item_id: str, db: Session = Depends(get_db), current_admin: dict = Depends(get_current_admin)):
-    """
-    Add a food item to a place's menu.
-
-    - **place_name**: The name of the place to add the item to.
-    - **item_id**: The ID of the food item to add.
-    """
-
+async def add_item_to_place(
+    place_name: str,
+    item_id: str,
+    db: Session = Depends(get_db),
+    current_admin: dict = Depends(get_current_admin)
+):
     place = get_place_by_name_or_id(db, place_name)
 
     if not place:
@@ -121,7 +111,7 @@ async def add_item_to_place(place_name: str, item_id: str, db: Session = Depends
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid UUID format")
 
-    item = db.query(FoodItem).get(item_id)  # Check if item exists
+    item = db.query(FoodItem).get(item_id)
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
 
