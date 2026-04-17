@@ -3,9 +3,15 @@ import './FeedPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
+type UploadSelection = {
+  diningHall: string
+  itemId?: string
+  itemName?: string
+}
+
 type FeedPageProps = {
   token: string
-  onOpenUpload: () => void
+  onOpenUpload: (selection: UploadSelection) => void
 }
 
 type Post = {
@@ -92,6 +98,8 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
   const [menuItems, setMenuItems] = useState<FoodItem[]>([])
   const [menuLoading, setMenuLoading] = useState(false)
   const [menuError, setMenuError] = useState('')
+
+  const [isUploadPopupOpen, setIsUploadPopupOpen] = useState(false)
 
   async function loadPosts() {
     setLoading(true)
@@ -202,6 +210,22 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
       console.error(error)
       setMessage('Network error while voting')
     }
+  }
+
+  function handleUploadChoice(placeKey: PlaceKey) {
+    setIsUploadPopupOpen(false)
+    onOpenUpload({
+      diningHall: PLACE_NAMES[placeKey],
+    })
+  }
+
+  function handleMenuItemClick(item: FoodItem) {
+    setIsMenuOpen(false)
+    onOpenUpload({
+      diningHall: PLACE_NAMES[selectedPlace],
+      itemId: item.id,
+      itemName: item.name,
+    })
   }
 
   const visiblePosts = useMemo(() => {
@@ -341,14 +365,35 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
           })}
         </main>
 
-        <button
-          className="floating-add-button"
-          type="button"
-          onClick={onOpenUpload}
-          aria-label="Create review"
-        >
-          +
-        </button>
+        <div className="floating-add-wrapper">
+          {isUploadPopupOpen && (
+            <div className="upload-choice-popup">
+              <button
+                type="button"
+                className="upload-choice-button"
+                onClick={() => handleUploadChoice('campus')}
+              >
+                Campus Center
+              </button>
+              <button
+                type="button"
+                className="upload-choice-button"
+                onClick={() => handleUploadChoice('terrace')}
+              >
+                Terraces
+              </button>
+            </div>
+          )}
+
+          <button
+            className="floating-add-button"
+            type="button"
+            onClick={() => setIsUploadPopupOpen((current) => !current)}
+            aria-label="Create review"
+          >
+            +
+          </button>
+        </div>
       </div>
 
       {isMenuOpen && (
@@ -401,7 +446,12 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
               )}
 
               {menuItems.map((item) => (
-                <div key={item.id} className="menu-item-card">
+                <button
+                  key={item.id}
+                  type="button"
+                  className="menu-item-card menu-item-button"
+                  onClick={() => handleMenuItemClick(item)}
+                >
                   <div className="menu-item-top">
                     <h3>{item.name}</h3>
                     {typeof item.average_rating === 'number' && (
@@ -414,7 +464,7 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
                   {item.description && (
                     <p className="menu-item-description">{item.description}</p>
                   )}
-                </div>
+                </button>
               ))}
             </div>
           </aside>
