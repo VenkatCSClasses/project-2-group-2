@@ -64,7 +64,7 @@ def register_user(db, username: str, password_str: str, email: str, image: Uploa
     image_path = None
     if image:
         try:
-            image_path = process_and_save_image(image.file.read(), max_size=(512, 512))
+            image_path = process_and_save_image(image.file.read(), max_size=(1080, 1080))
         except Exception as e:
             raise ValueError("Error processing profile image") from e
 
@@ -181,3 +181,25 @@ async def change_username(new_username: str, db: Session = Depends(get_db), curr
     db.refresh(user)
     
     return {"message": "Username changed successfully", "username": new_username}
+
+
+@router.post("/change-pfp")
+async def change_profile_picture(image: UploadFile, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    """
+    Change the profile picture for the current user.
+
+    - **image**: The new profile picture to set for the user.
+    """
+    user = db.exec(select(User).where(User.id == current_user["user_id"])).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    try:
+        image_path = process_and_save_image(image.file.read(), max_size=(1080, 1080))
+        user.profile_image_url = image_path
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return {"message": "Profile picture changed successfully", "profile_picture": image_path}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Error processing profile image") from e

@@ -5,9 +5,10 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
 
 type AuthPageProps = {
   onAuthSuccess: (token: string) => void
+  onRegisterSuccess: (token: string) => void
 }
 
-function AuthPage({ onAuthSuccess }: AuthPageProps) {
+function AuthPage({ onAuthSuccess, onRegisterSuccess }: AuthPageProps) {
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -20,7 +21,6 @@ function AuthPage({ onAuthSuccess }: AuthPageProps) {
 
     try {
       const endpoint = mode === 'login' ? '/auth/login' : '/auth/register'
-
       const body =
         mode === 'login'
           ? new URLSearchParams({ username, password })
@@ -42,7 +42,11 @@ function AuthPage({ onAuthSuccess }: AuthPageProps) {
       }
 
       localStorage.setItem('accessToken', data.access_token)
-      onAuthSuccess(data.access_token)
+      if (mode === 'register') {
+        onRegisterSuccess(data.access_token)
+      } else {
+        onAuthSuccess(data.access_token)
+      }
       setMessage('Success!')
     } catch (err) {
       console.error(err)

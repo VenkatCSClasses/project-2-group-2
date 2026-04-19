@@ -71,6 +71,14 @@
   font-size: 1.2rem;
 }
 
+.profile-circle-img {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
+}
+
 .feed-list {
   display: flex;
   flex-direction: column;
