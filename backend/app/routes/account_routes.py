@@ -34,6 +34,27 @@ async def get_accounts(start: int = 0, limit: int = 10, db: Session = Depends(ge
         ],
     }
 
+@router.get("/me")
+async def get_current_account(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """
+    Get the current user's account information.
+
+    This endpoint retrieves information about the currently authenticated user's account.
+    """
+    user = db.exec(select(User).where(User.id == current_user["user_id"])).first()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        
+    return {
+        "message": "Current account retrieved successfully",
+        "username": user.username,
+        "account_info": {
+            "email": user.email,
+            "role": user.role.value,
+            "profile_picture": user.profile_image_url
+        }
+    }
+
 
 @router.get("/search")
 async def search_accounts(query: str, db: Session = Depends(get_db)):

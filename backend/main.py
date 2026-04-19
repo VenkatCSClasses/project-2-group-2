@@ -15,8 +15,11 @@ from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI()
 scheduler = BackgroundScheduler()
 upload_dir = Path(__file__).resolve().parent / "uploads"
+static_dir = Path(__file__).resolve().parent / "static"
+
 
 upload_dir.mkdir(parents=True, exist_ok=True)
+static_dir.mkdir(parents=True, exist_ok=True)
 
 
 app.add_middleware(
@@ -63,3 +66,4 @@ def on_shutdown():
 ## Import the router declared in app/routes/__init__.py
 app.include_router(api_router)
 app.mount("/uploads", StaticFiles(directory=str(upload_dir)), name="uploads")
+app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")

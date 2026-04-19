@@ -1,0 +1,148 @@
+.pfp-page-wrapper {
+  min-height: 100vh;
+  width: 100%;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+}
+
+.pfp-card {
+  width: 100%;
+  max-width: 520px;
+}
+
+.pfp-page-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 24px;
+  padding: 28px 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  text-align: center;
+}
+
+.pfp-page-container h2 {
+  margin: 0 0 8px 0;
+  font-size: 22px;
+  color: #111;
+}
+
+.pfp-optional {
+  font-size: 15px;
+  color: #777;
+  font-weight: 500;
+  margin-bottom: 24px;
+}
+
+.upload-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.upload-btn {
+  width: 100%;
+  border: 1px solid #dcdfe4;
+  border-radius: 14px;
+  padding: 16px;
+  font-size: 17px;
+  background: #fafafa;
+  color: black;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 16px;
+}
+
+.upload-btn:hover {
+  background: white;
+  border-color: #999;
+}
+
+.cropper-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.crop-workspace {
+  position: relative;
+  width: 100%;
+  height: 300px;
+  background: #333;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.slider-container {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-top: 16px;
+  width: 100%;
+}
+
+.slider-container label {
+  font-weight: 600;
+  color: #555;
+  font-size: 14px;
+}
+
+.zoom-slider {
+  flex: 1;
+  accent-color: black;
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.save-btn {
+  border: none;
+  border-radius: 14px;
+  padding: 16px;
+  background: black;
+  color: white;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+  width: 100%;
+}
+
+.save-btn:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+.save-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.skip-btn {
+  border: none;
+  border-radius: 14px;
+  padding: 16px;
+  background: transparent;
+  color: #555;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+
+.skip-btn:hover:not(:disabled) {
+  background: #f3f3f3;
+}

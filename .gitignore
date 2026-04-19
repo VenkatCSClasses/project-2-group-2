@@ -25,3 +25,4 @@ build/
 .env
 .ruff_cache/
 backend/uploads/*
+backend/static/pfps/*

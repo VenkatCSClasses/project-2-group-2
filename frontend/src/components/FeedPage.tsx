@@ -93,6 +93,24 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
   const [menuLoading, setMenuLoading] = useState(false)
   const [menuError, setMenuError] = useState('')
 
+  const [currentUserPfp, setCurrentUserPfp] = useState<string | null>(null)
+
+  async function loadUser() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/accounts/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      const data = await response.json()
+      if (response.ok && data?.account_info?.profile_picture) {
+        setCurrentUserPfp(data.account_info.profile_picture)
+      }
+    } catch (error) {
+      console.error('Failed to load user info', error)
+    }
+  }
+
   async function loadPosts() {
     setLoading(true)
     setMessage('')
@@ -160,6 +178,7 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
 
   useEffect(() => {
     void loadPosts()
+    void loadUser()
   }, [])
 
   useEffect(() => {
@@ -253,7 +272,15 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
           </button>
 
           <button className="profile-button" type="button" aria-label="Profile">
-            <span className="profile-circle">👤</span>
+            {currentUserPfp ? (
+              <img 
+                src={currentUserPfp.startsWith('http') ? currentUserPfp : `${API_BASE_URL}${currentUserPfp}`}
+                alt="Profile"
+                className="profile-circle-img"
+              />
+            ) : (
+              <span className="profile-circle">👤</span>
+            )}
           </button>
         </header>
 
