@@ -38,6 +38,12 @@
   margin-bottom: 24px;
 }
 
+.error-message {
+  margin: 0;
+  color: #b91c1c;
+  font-size: 0.95rem;
+}
+
 .upload-section {
   display: flex;
   flex-direction: column;
