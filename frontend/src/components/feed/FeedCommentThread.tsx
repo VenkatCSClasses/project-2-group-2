@@ -1,15 +1,19 @@
-import type { Comment, ThreadState } from './types'
+import { useEffect, useRef, useState } from 'react'
+import type { Comment, ThreadState, ViewerRole } from './types'
 import { formatTimeAgo, getAvatarLetter } from './utils'
 
 type FeedCommentThreadProps = {
   thread: ThreadState
   commentCount: number
+  viewerRole: ViewerRole
   onDraftChange: (value: string) => void
   onReplyDraftChange: (commentId: string, value: string) => void
   onReplyToggle: (commentId: string) => void
   onCloseReply: () => void
   onSubmitComment: (parentId?: string) => void
   onCommentVote: (commentId: string, upvote: boolean) => void
+  onDeleteComment: (commentId: string) => void
+  onReportComment: (commentId: string) => void
 }
 
 function sortComments(comments: Comment[], parentId: string | null) {
@@ -25,28 +29,64 @@ function FeedCommentTree({
   comments,
   parentId,
   thread,
+  viewerRole,
   onReplyDraftChange,
   onReplyToggle,
   onCloseReply,
   onSubmitComment,
   onCommentVote,
+  onDeleteComment,
+  onReportComment,
 }: {
   comments: Comment[]
   parentId: string | null
   thread: ThreadState
+  viewerRole: ViewerRole
   onReplyDraftChange: (commentId: string, value: string) => void
   onReplyToggle: (commentId: string) => void
   onCloseReply: () => void
   onSubmitComment: (parentId?: string) => void
   onCommentVote: (commentId: string, upvote: boolean) => void
+  onDeleteComment: (commentId: string) => void
+  onReportComment: (commentId: string) => void
 }) {
   const children = sortComments(comments, parentId)
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const isModerator = viewerRole === 'moderator' || viewerRole === 'admin'
+  const menuRootRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!openMenuId) {
+      return
+    }
+
+    function handlePointerDown(event: MouseEvent) {
+      if (!menuRootRef.current?.contains(event.target as Node)) {
+        setOpenMenuId(null)
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setOpenMenuId(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [openMenuId])
 
   if (children.length === 0) {
     return null
   }
 
-  return children.map((comment) => {
+  return (
+    <div ref={menuRootRef}>
+      {children.map((comment) => {
     const username = comment.author_username || 'user'
     const isReplying = thread.replyTargetId === comment.id
     const replyDraft = thread.replyDrafts[comment.id] ?? ''
@@ -76,6 +116,42 @@ function FeedCommentTree({
               </div>
 
               <p className="feed-comment-text">{comment.text}</p>
+            </div>
+
+            <div className="feed-overflow-menu">
+              <button
+                className="overflow-trigger overflow-trigger-comment"
+                type="button"
+                aria-label="Comment actions"
+                onClick={() =>
+                  setOpenMenuId((current) =>
+                    current === comment.id ? null : comment.id
+                  )
+                }
+              >
+                ⋯
+              </button>
+
+              {openMenuId === comment.id && (
+                <div className="overflow-menu-panel">
+                  <button
+                    className={`overflow-menu-item ${
+                      isModerator ? 'overflow-menu-item-danger' : ''
+                    }`}
+                    type="button"
+                    onClick={() => {
+                      setOpenMenuId(null)
+                      if (isModerator) {
+                        onDeleteComment(comment.id)
+                        return
+                      }
+                      onReportComment(comment.id)
+                    }}
+                  >
+                    {isModerator ? 'Remove comment' : 'Report comment'}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -151,28 +227,36 @@ function FeedCommentTree({
               comments={comments}
               parentId={comment.id}
               thread={thread}
+              viewerRole={viewerRole}
               onReplyDraftChange={onReplyDraftChange}
               onReplyToggle={onReplyToggle}
               onCloseReply={onCloseReply}
               onSubmitComment={onSubmitComment}
               onCommentVote={onCommentVote}
+              onDeleteComment={onDeleteComment}
+              onReportComment={onReportComment}
             />
           </div>
         </div>
       </div>
     )
-  })
+      })}
+    </div>
+  )
 }
 
 function FeedCommentThread({
   thread,
   commentCount,
+  viewerRole,
   onDraftChange,
   onReplyDraftChange,
   onReplyToggle,
   onCloseReply,
   onSubmitComment,
   onCommentVote,
+  onDeleteComment,
+  onReportComment,
 }: FeedCommentThreadProps) {
   return (
     <section className="feed-thread">
@@ -214,11 +298,14 @@ function FeedCommentThread({
           comments={thread.comments}
           parentId={null}
           thread={thread}
+          viewerRole={viewerRole}
           onReplyDraftChange={onReplyDraftChange}
           onReplyToggle={onReplyToggle}
           onCloseReply={onCloseReply}
           onSubmitComment={onSubmitComment}
           onCommentVote={onCommentVote}
+          onDeleteComment={onDeleteComment}
+          onReportComment={onReportComment}
         />
       </div>
     </section>

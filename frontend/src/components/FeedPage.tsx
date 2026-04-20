@@ -12,6 +12,7 @@ import type {
   PostDetailsResponse,
   PostsResponse,
   ThreadState,
+  ViewerRole,
 } from './feed/types'
 import './FeedPage.css'
 
@@ -39,6 +40,7 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
   const [menuError, setMenuError] = useState('')
   const [isUploadPopupOpen, setIsUploadPopupOpen] = useState(false)
   const [currentUserPfp, setCurrentUserPfp] = useState<string | null>(null)
+  const [currentUserRole, setCurrentUserRole] = useState<ViewerRole>('')
 
   function updateThreadState(
     postId: string,
@@ -184,6 +186,9 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
         if (response.ok && data?.account_info?.profile_picture) {
           setCurrentUserPfp(data.account_info.profile_picture)
         }
+        if (response.ok && data?.account_info?.role) {
+          setCurrentUserRole(data.account_info.role as ViewerRole)
+        }
       } catch (error) {
         console.error('Failed to load user info', error)
       }
@@ -279,6 +284,168 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
       updateThreadState(postId, (current) => ({
         ...current,
         error: 'Network error while voting on comment',
+      }))
+    }
+  }
+
+  async function handleDeletePost(postId: string) {
+    setMessage('')
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/posts/${postId}/delete`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        setMessage('Could not remove post')
+        return
+      }
+
+      setPosts((current) => current.filter((post) => post.id !== postId))
+      setCommentCounts((current) => {
+        const next = { ...current }
+        delete next[postId]
+        return next
+      })
+      setThreadStates((current) => {
+        const next = { ...current }
+        delete next[postId]
+        return next
+      })
+    } catch (error) {
+      console.error(error)
+      setMessage('Network error while removing post')
+    }
+  }
+
+  async function handleReportPost(postId: string) {
+    setMessage('')
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/posts/${postId}/report`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        setMessage('Could not report post')
+        return
+      }
+
+      setMessage('Post reported')
+    } catch (error) {
+      console.error(error)
+      setMessage('Network error while reporting post')
+    }
+  }
+
+  async function handleDeleteComment(postId: string, commentId: string) {
+    updateThreadState(postId, (current) => ({ ...current, error: '' }))
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/posts/comments/${commentId}/delete`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+
+      if (!response.ok) {
+        updateThreadState(postId, (current) => ({
+          ...current,
+          error: 'Could not remove comment',
+        }))
+        return
+      }
+
+      let removedCount = 0
+
+      updateThreadState(postId, (current) => {
+        const idsToRemove = new Set<string>([commentId])
+        let changed = true
+
+        while (changed) {
+          changed = false
+          for (const comment of current.comments) {
+            if (comment.parent_id && idsToRemove.has(comment.parent_id) && !idsToRemove.has(comment.id)) {
+              idsToRemove.add(comment.id)
+              changed = true
+            }
+          }
+        }
+
+        const nextComments = current.comments.filter(
+          (comment) => !idsToRemove.has(comment.id)
+        )
+        removedCount = idsToRemove.size
+        const nextReplyDrafts = { ...current.replyDrafts }
+        for (const id of idsToRemove) {
+          delete nextReplyDrafts[id]
+        }
+
+        return {
+          ...current,
+          comments: nextComments,
+          replyDrafts: nextReplyDrafts,
+          replyTargetId:
+            current.replyTargetId && idsToRemove.has(current.replyTargetId)
+              ? null
+              : current.replyTargetId,
+        }
+      })
+
+      setCommentCounts((current) => ({
+        ...current,
+        [postId]: Math.max(0, (current[postId] ?? 0) - removedCount),
+      }))
+    } catch (error) {
+      console.error(error)
+      updateThreadState(postId, (current) => ({
+        ...current,
+        error: 'Network error while removing comment',
+      }))
+    }
+  }
+
+  async function handleReportComment(postId: string, commentId: string) {
+    updateThreadState(postId, (current) => ({ ...current, error: '' }))
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/posts/comments/${commentId}/report`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+
+      if (!response.ok) {
+        updateThreadState(postId, (current) => ({
+          ...current,
+          error: 'Could not report comment',
+        }))
+        return
+      }
+
+      updateThreadState(postId, (current) => ({
+        ...current,
+        error: 'Comment reported',
+      }))
+    } catch (error) {
+      console.error(error)
+      updateThreadState(postId, (current) => ({
+        ...current,
+        error: 'Network error while reporting comment',
       }))
     }
   }
@@ -479,8 +646,11 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
                 apiBaseUrl={API_BASE_URL}
                 thread={thread}
                 commentCount={getCommentCount(post.id)}
+                viewerRole={currentUserRole}
                 onToggleComments={() => void toggleComments(post.id)}
                 onVote={(upvote) => void handleVote(post.id, upvote)}
+                onDeletePost={() => void handleDeletePost(post.id)}
+                onReportPost={() => void handleReportPost(post.id)}
                 onDraftChange={(value) =>
                   updateThreadState(post.id, (current) => ({
                     ...current,
@@ -515,6 +685,12 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
                 }
                 onCommentVote={(commentId, upvote) =>
                   void handleCommentVote(post.id, commentId, upvote)
+                }
+                onDeleteComment={(commentId) =>
+                  void handleDeleteComment(post.id, commentId)
+                }
+                onReportComment={(commentId) =>
+                  void handleReportComment(post.id, commentId)
                 }
               />
             )

@@ -269,6 +269,65 @@
   gap: 10px;
 }
 
+.feed-overflow-menu {
+  position: relative;
+  margin-left: auto;
+}
+
+.overflow-trigger {
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 1.5rem;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.overflow-trigger:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.overflow-trigger-comment {
+  font-size: 1.25rem;
+}
+
+.overflow-menu-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 148px;
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  z-index: 5;
+}
+
+.overflow-menu-item {
+  width: 100%;
+  border: none;
+  background: white;
+  color: #111827;
+  text-align: left;
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.overflow-menu-item:hover {
+  background: #f9fafb;
+}
+
+.overflow-menu-item-danger {
+  color: #991b1b;
+}
+
 .primary-comment-button,
 .secondary-comment-button,
 .comment-action-button {

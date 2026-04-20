@@ -9,6 +9,8 @@ export type FeedPageProps = {
   onOpenUpload: (selection: UploadSelection) => void
 }
 
+export type ViewerRole = 'user' | 'moderator' | 'admin' | ''
+
 export type Post = {
   id: string
   author_id: string
