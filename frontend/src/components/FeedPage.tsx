@@ -12,6 +12,7 @@ type UploadSelection = {
 type FeedPageProps = {
   token: string
   onOpenUpload: (selection: UploadSelection) => void
+  onOpenProfile: () => void
 }
 
 type Post = {
@@ -86,7 +87,7 @@ function renderStars(starRating: number): string {
   return '★'.repeat(fullStars) + '☆'.repeat(5 - fullStars)
 }
 
-function FeedPage({ token, onOpenUpload }: FeedPageProps) {
+function FeedPage({ token, onOpenUpload, onOpenProfile }: FeedPageProps) {
   const [posts, setPosts] = useState<Post[]>([])
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
@@ -293,7 +294,7 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
             {filterMode === 'latest' ? 'Latest' : 'Top'}
           </button>
 
-          <button className="profile-button" type="button" aria-label="Profile">
+          <button className="profile-button" type="button" aria-label="Profile" onClick={onOpenProfile}>
             {currentUserPfp ? (
               <img 
                 src={currentUserPfp.startsWith('http') ? currentUserPfp : `${API_BASE_URL}${currentUserPfp}`}

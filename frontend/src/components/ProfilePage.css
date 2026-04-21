@@ -1,0 +1,302 @@
+.profile-page {
+  min-height: 100vh;
+  width: 100%;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  padding: 0 20px;
+  box-sizing: border-box;
+}
+
+.profile-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+  border-bottom: 1px solid #eee;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.profile-topbar h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #000;
+}
+
+.back-button {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: #000;
+  cursor: pointer;
+  padding: 8px;
+  width: 60px;
+  text-align: left;
+}
+
+.profile-content {
+  width: 100%;
+  max-width: 600px;
+  margin: 32px auto;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.profile-picture-section {
+  display: flex;
+  justify-content: center;
+}
+
+.profile-picture-wrapper {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  background: #f3f3f3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-img-large {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-placeholder-large {
+  font-size: 48px;
+  color: #666;
+  font-weight: bold;
+}
+
+.profile-picture-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  text-align: center;
+  padding: 6px 0;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.profile-picture-wrapper:hover .profile-picture-overlay {
+  opacity: 1;
+}
+
+.profile-msg {
+  text-align: center;
+  font-size: 14px;
+  color: #d32f2f;
+  background: #ffebee;
+  padding: 10px;
+  border-radius: 8px;
+  margin: 0;
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #fafafa;
+  padding: 24px;
+  border-radius: 24px;
+  border: 1px solid #e5e7eb;
+}
+
+.profile-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.profile-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.profile-label {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.profile-val {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+  color: #111;
+  font-weight: 500;
+}
+
+.edit-icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  color: #999;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.edit-icon-btn:hover {
+  background: #eee;
+  color: #000;
+}
+
+.profile-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #fafafa;
+  padding: 24px;
+  border-radius: 24px;
+  border: 1px solid #e5e7eb;
+}
+
+.profile-edit-form h3 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+}
+
+.profile-edit-form input {
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+  outline: none;
+  color: #000;
+  background: #fff;
+}
+
+.profile-edit-form input:focus {
+  border-color: #888;
+}
+
+.profile-edit-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.profile-edit-actions button {
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+.profile-edit-actions button:not(.primary-btn) {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.profile-edit-actions button:not(.primary-btn):hover {
+  background: #d4d4d4;
+}
+
+.primary-btn {
+  background: black;
+  color: white;
+}
+
+.primary-btn:hover {
+  background: #333;
+}
+
+.profile-reviews-section {
+  margin-top: 16px;
+}
+
+.profile-reviews-section h3 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.reviews-placeholder {
+  background: #fafafa;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 32px;
+  text-align: center;
+  color: #888;
+  font-size: 15px;
+  border-style: dashed;
+}
+
+/* Modal for cropping PFP */
+.pfp-cropper-modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.8);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.pfp-cropper-content {
+  background: white;
+  padding: 24px;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pfp-cropper-content h3 {
+  margin: 0;
+}
+
+.pfp-cropper-workspace {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  background: #333;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.pfp-cropper-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.pfp-cropper-actions button {
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pfp-cropper-actions button:not(.primary-btn) {
+  background: #eee;
+  color: #333;
+}
+
+.pfp-cropper-actions button:not(.primary-btn):hover {
+  background: #ddd;
+}
