@@ -59,6 +59,79 @@ graph LR
 ```
 [Also view on mermaid.live](https://mermaid.live/edit#pako:eNptVF1v2jAU_SuWpUpMgg4oHyEPk7Z23R6o1lFtD4MpcvElWEts5Dh0rOK_79qOWQx7SXzux_H1vUf3la4VB5rSXLPdlswXK0mIepGgO8sv9vfzjbWUineWDxipmVGNra5s0LcqxKyk_Vb1s6d6OlQGSm8kpFC5kBl-VW06y7lFb-cO-WRC9gJesp1WG1FAZ_kdEXn0KIrYAPDGfY_HyMeFFDLPtqwompA7ZyGf0RIid6oymQab0Fk-IiALByL_WpUlSNME3HoUIrAHcGJYIDhj4FAARliizvLOAYK9JJbr7LXAxdoIJavTi50FOPlas0KYA1Ebcq_U6Z0adkqbhnvhQMRbAdPrbbZRdmBPDhAmObkXhQEdUbkS8C3YoNBQ9JLHgq3B5bA9jjsH4mNsmk-8uiIohTaJqwO4Kys8ZdEYXXnVWW-YPMT9eS8P0Tuemcy8wD4wSYLITvc7aXqUiz1kTp-f8GQrwy6KPeomh5ADkvuDpSS93rtIj5GjLUNy6bHyu7S2hBc5W1qL7C0FXcY32oscLUn9r9qTjOJb_mklsrc0cknmh-27hV1tOaIht91hVm3b2Zw9n9srzh2Gdm4vfUmBxbLSLi1Bl0xw3FKvbtFQs4USVjTFI2f614qu5BHjWG3U00GuaWp0DV2qVZ1vabphRYWo3nFs-51guJ_KELJj8odSJ5hre02TjaoBfatqaWg6c6E0faW_adob9kfX_WQwTaaD_uxmOu7SA00Hyex6htbRsJ_MkhGaj136x5EPrvvjyfBmNJkl4-k4GU5GoZyPXOBCDVeCQw9-I7vFfPwLMbvmvg)
 
+```mermaid
+erDiagram
+    User ||--o{ Review : ""
+    User ||--o{ Comment : ""
+    User ||--o{ Vote : ""
+    User ||--o{ Report : ""
+    FoodPlace ||--o{ FoodItem : ""
+    FoodItem ||--o{ Review : ""
+    Review ||--o{ Comment : ""
+    Review ||--o{ Vote : ""
+    Review ||--o{ Report : ""
+    Comment ||--o{ Vote : ""
+    Comment ||--o{ Report : ""
+    Comment ||--o{ Comment : ""
+
+    User {
+        UUID id PK
+        string username
+        string email
+        string password_hash
+        string profile_image_url
+        UserRole role
+    }
+    FoodItem {
+        UUID id PK
+        string name
+        string description
+        string image_url
+        int average_rating
+        date menu_date
+        UUID food_place_id FK
+    }
+    Review {
+        UUID id PK
+        UUID author_id FK
+        UUID food_item_id FK
+        int star_rating
+        string content
+        string image_url
+        datetime created_at
+    }
+    Comment {
+        UUID id PK
+        string text
+        UUID author_id FK
+        UUID review_id FK
+        UUID parent_id FK
+        datetime created_at
+    }
+    FoodPlace {
+        UUID id PK
+        string name
+        string description
+        string image_url
+    }
+    Vote {
+        UUID id PK
+        UUID user_id FK
+        UUID review_id FK
+        UUID comment_id FK
+        bool is_upvote
+        datetime created_at
+    }
+    Report {
+        UUID id PK
+        UUID reporter_id FK
+        UUID review_id FK
+        UUID comment_id FK
+        string reason
+        datetime created_at
+    }
+```
+
 [Daily Standup Log](https://docs.google.com/document/d/1Bd0j40ErMJcD9kVfZHUjiKydrN5h3AueoKfGCXfYuHg/edit?usp=sharing)
 
 
