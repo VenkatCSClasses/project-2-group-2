@@ -2,11 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 
 from app.database import cache, get_db
-from app.models import User
+from app.models import User, Review
 from app.schemas import UserRole
 from app.utils import get_current_user, get_current_admin, get_current_moderator
+from app.serde import serialize_reviews
+from app.routes.helpers import parse_uuid
 
-# This will be mounted at "/account" in main.py, so all routes here will be prefixed with /account
+# This will be mounted at "/accounts" in main.py, so all routes here will be prefixed with /accounts
 router = APIRouter()
 
 @router.get("/")
@@ -54,6 +56,20 @@ async def get_current_account(current_user: dict = Depends(get_current_user), db
             "profile_picture": user.profile_image_url
         }
     }
+
+@router.get("/me/posts")
+async def get_current_user_posts(start: int = 0, limit: int = 10, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """
+    Get the current user's posts.
+    """
+    user_id = parse_uuid(current_user["user_id"])
+    user = db.exec(select(User).where(User.id == user_id)).first()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        
+    posts = db.exec(select(Review).where(Review.author_id == user.id).order_by(Review.created_at.desc()).offset(start).limit(limit)).all()
+    results = serialize_reviews(db, posts, viewer_user_id=user_id)
+    return {"start": start, "limit": limit, "posts": results}
 
 
 @router.get("/search")

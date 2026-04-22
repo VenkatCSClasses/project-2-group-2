@@ -23,7 +23,7 @@ const PLACE_NAMES: Record<PlaceKey, string> = {
   terrace: 'Terrace Dining Hall',
 }
 
-function FeedPage({ token, onOpenUpload }: FeedPageProps) {
+function FeedPage({ token, onOpenUpload, onOpenProfile }: FeedPageProps) {
   const [posts, setPosts] = useState<Post[]>([])
   const [threadStates, setThreadStates] = useState<Record<string, ThreadState>>(
     {}
