@@ -635,7 +635,7 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
             {filterMode === 'latest' ? 'Latest' : 'Top'}
           </button>
 
-          <button className="profile-button" type="button" aria-label="Profile">
+          <button className="profile-button" type="button" aria-label="Profile" onClick={onOpenProfile}>
             {currentUserPfp ? (
               <img
                 src={

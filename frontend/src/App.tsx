@@ -5,6 +5,8 @@ import ProfilePicturePage from './components/ProfilePicturePage'
 import RatingUploadPage from './components/RatingUploadPage'
 import AuthPage from './components/AuthPage'
 
+import ProfilePage from './components/ProfilePage'
+
 type UploadSelection = {
   diningHall: string
   itemId?: string
@@ -13,7 +15,7 @@ type UploadSelection = {
 
 function App() {
   const [token, setToken] = useState<string | null>(null);
-  const [page, setPage] = useState<'feed' | 'upload'>('feed');
+  const [page, setPage] = useState<'feed' | 'upload' | 'profile'>('feed');
   const [showPfpSetup, setShowPfpSetup] = useState(false);
   const [uploadSelection, setUploadSelection] = useState<UploadSelection>({
     diningHall: '',
@@ -48,6 +50,12 @@ function App() {
         setUploadSelection(selection)
         setPage('upload')
       }}
+      onOpenProfile={() => setPage('profile')}
+    />
+  ) : page === 'profile' ? (
+    <ProfilePage 
+      token={token}
+      onBack={() => setPage('feed')}
     />
   ) : (
     <main className="app-shell">
