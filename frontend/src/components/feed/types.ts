@@ -10,6 +10,7 @@ export type FeedPageProps = {
 }
 
 export type ViewerRole = 'user' | 'moderator' | 'admin' | ''
+export type VoteSelection = 'up' | 'down' | null
 
 export type Post = {
   id: string
@@ -23,6 +24,7 @@ export type Post = {
   created_at: string
   upvotes: number
   downvotes: number
+  viewer_vote?: VoteSelection
 }
 
 export type Comment = {
@@ -35,6 +37,7 @@ export type Comment = {
   created_at: string
   upvotes: number
   downvotes: number
+  viewer_vote?: VoteSelection
 }
 
 export type PostsResponse = {

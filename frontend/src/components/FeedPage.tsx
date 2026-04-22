@@ -12,6 +12,7 @@ import type {
   PostDetailsResponse,
   PostsResponse,
   ThreadState,
+  VoteSelection,
   ViewerRole,
 } from './feed/types'
 import './FeedPage.css'
@@ -229,6 +230,9 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
                 ...post,
                 upvotes: data.upvotes ?? post.upvotes,
                 downvotes: data.downvotes ?? post.downvotes,
+                viewer_vote:
+                  data.viewer_vote ??
+                  ((upvote ? 'up' : 'down') as VoteSelection),
               }
             : post
         )
@@ -275,6 +279,9 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
                 ...comment,
                 upvotes: data.upvotes ?? comment.upvotes,
                 downvotes: data.downvotes ?? comment.downvotes,
+                viewer_vote:
+                  data.viewer_vote ??
+                  ((upvote ? 'up' : 'down') as VoteSelection),
               }
             : comment
         ),

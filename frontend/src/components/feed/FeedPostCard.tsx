@@ -50,6 +50,8 @@ function FeedPostCard({
 }: FeedPostCardProps) {
   const username = post.author_username || 'user'
   const ratingOutOfFive = (post.star_rating / 2).toFixed(1)
+  const hasUpvoted = post.viewer_vote === 'up'
+  const hasDownvoted = post.viewer_vote === 'down'
   const imageSrc = post.image_url
     ? post.image_url.startsWith('http')
       ? post.image_url
@@ -194,12 +196,22 @@ function FeedPostCard({
         </button>
 
         <div className="vote-group">
-          <button className="vote-button" type="button" onClick={() => onVote(true)}>
+          <button
+            className={`vote-button ${hasUpvoted ? 'vote-button-active' : ''}`}
+            type="button"
+            aria-pressed={hasUpvoted}
+            onClick={() => onVote(true)}
+          >
             <ChevronUp className="feed-action-icon" aria-hidden="true" />
             <span className="feed-action-count">{post.upvotes}</span>
           </button>
 
-          <button className="vote-button" type="button" onClick={() => onVote(false)}>
+          <button
+            className={`vote-button ${hasDownvoted ? 'vote-button-active' : ''}`}
+            type="button"
+            aria-pressed={hasDownvoted}
+            onClick={() => onVote(false)}
+          >
             <ChevronDown className="feed-action-icon" aria-hidden="true" />
             <span className="feed-action-count">{post.downvotes}</span>
           </button>
