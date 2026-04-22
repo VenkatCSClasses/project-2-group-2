@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import {
   ChevronDown,
   ChevronUp,
@@ -7,7 +7,13 @@ import {
 } from 'lucide-react'
 import FeedCommentThread from './FeedCommentThread'
 import type { Post, ThreadState, ViewerRole, VoteSelection } from './types'
-import { formatTimeAgo, getAvatarLetter, renderStars } from './utils'
+import {
+  formatTimeAgo,
+  getAvatarLetter,
+  renderStars,
+  viewerCanModerate,
+} from './utils'
+import { useDismissibleLayer } from './useDismissibleLayer'
 
 type FeedPostCardProps = {
   post: Post
@@ -58,33 +64,10 @@ function FeedPostCard({
       : `${apiBaseUrl}${post.image_url}`
     : null
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const isModerator = viewerRole === 'moderator' || viewerRole === 'admin'
-  const menuRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!isMenuOpen) {
-      return
-    }
-
-    function handlePointerDown(event: MouseEvent) {
-      if (!menuRef.current?.contains(event.target as Node)) {
-        setIsMenuOpen(false)
-      }
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setIsMenuOpen(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handlePointerDown)
-    document.addEventListener('keydown', handleKeyDown)
-    return () => {
-      document.removeEventListener('mousedown', handlePointerDown)
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [isMenuOpen])
+  const isModerator = viewerCanModerate(viewerRole)
+  const menuRef = useDismissibleLayer<HTMLDivElement>(isMenuOpen, () =>
+    setIsMenuOpen(false)
+  )
 
   return (
     <article className="feed-card">

@@ -247,7 +247,7 @@
 }
 
 .comment-button {
-  padding-left: 0;
+  padding-left: 10px;
 }
 
 .comment-button-active,
@@ -614,16 +614,16 @@
 .comment-vote-cluster {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  padding: 2px;
+  gap: 4px;
+  padding: 3px;
   border: 1px solid #dbe4ee;
   border-radius: 999px;
   background: white;
 }
 
 .comment-vote-button {
-  width: 23px;
-  height: 23px;
+  min-height: 28px;
+  padding: 0 8px;
   border: none;
   border-radius: 999px;
   background: transparent;
@@ -632,6 +632,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .comment-vote-button:hover {

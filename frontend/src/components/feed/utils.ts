@@ -1,4 +1,4 @@
-import type { ThreadState } from './types'
+import type { ThreadState, ViewerRole } from './types'
 
 export function createInitialThreadState(): ThreadState {
   return {
@@ -40,4 +40,8 @@ export function renderStars(starRating: number): string {
 
 export function getAvatarLetter(username: string | null): string {
   return (username || 'user').charAt(0).toUpperCase()
+}
+
+export function viewerCanModerate(viewerRole: ViewerRole): boolean {
+  return viewerRole === 'moderator' || viewerRole === 'admin'
 }
