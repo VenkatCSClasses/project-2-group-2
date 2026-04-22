@@ -1039,3 +1039,22 @@
 .menu-review-page-button:hover {
   background: #1f2937;
 }
+.feed-star-display {
+  font-size: 1rem;
+  line-height: 1;
+  display: inline-block;
+}
+
+.feed-star-display.full {
+  color: #f5b301;
+}
+
+.feed-star-display.half {
+  background: linear-gradient(90deg, #f5b301 50%, #d4d4d8 50%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.feed-star-display.empty {
+  color: #d4d4d8;
+}
