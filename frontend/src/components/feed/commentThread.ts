@@ -1,8 +1,15 @@
 import type { Comment } from './types'
 
+export type CommentThreadStats = {
+  descendantCount: number
+  maxSubtreeDepth: number
+  replyCount: number
+}
+
 export type CommentThreadIndex = {
   childrenByParent: Record<string, Comment[]>
   commentsById: Record<string, Comment>
+  statsById: Record<string, CommentThreadStats>
 }
 
 export type CollapsedComments = Record<string, boolean>
@@ -44,7 +51,42 @@ export function buildCommentThreadIndex(comments: Comment[]): CommentThreadIndex
     )
   })
 
-  return { childrenByParent, commentsById }
+  const statsById: Record<string, CommentThreadStats> = {}
+
+  function visitComment(comment: Comment): CommentThreadStats {
+    const children = childrenByParent[comment.id] ?? []
+    let descendantCount = 0
+    let maxSubtreeDepth = 0
+
+    children.forEach((child) => {
+      const childStats = visitComment(child)
+      descendantCount += 1 + childStats.descendantCount
+      maxSubtreeDepth = Math.max(maxSubtreeDepth, childStats.maxSubtreeDepth + 1)
+    })
+
+    const stats = {
+      descendantCount,
+      maxSubtreeDepth,
+      replyCount: children.length,
+    }
+
+    statsById[comment.id] = stats
+    return stats
+  }
+
+  ;(childrenByParent[ROOT_COMMENT_KEY] ?? []).forEach((comment) => {
+    visitComment(comment)
+  })
+
+  comments.forEach((comment) => {
+    statsById[comment.id] ??= {
+      descendantCount: 0,
+      maxSubtreeDepth: 0,
+      replyCount: 0,
+    }
+  })
+
+  return { childrenByParent, commentsById, statsById }
 }
 
 export function collectCommentSubtreeIds(
@@ -63,6 +105,70 @@ export function collectCommentSubtreeIds(
 
   visit(commentId)
   return ids
+}
+
+function getThreadComplexity(
+  replyCount: number,
+  descendantCount: number,
+  maxSubtreeDepth: number
+) {
+  const branchingCount = Math.max(0, descendantCount - maxSubtreeDepth)
+
+  return (
+    maxSubtreeDepth +
+    branchingCount * 3 +
+    Math.max(0, replyCount - 1) * 2
+  )
+}
+
+export function isLinearReplyChain(
+  replyCount: number,
+  descendantCount: number,
+  maxSubtreeDepth: number
+) {
+  return replyCount === 1 && descendantCount === maxSubtreeDepth && descendantCount > 0
+}
+
+export function shouldAutoCollapseThread(
+  depth: number,
+  replyCount: number,
+  descendantCount: number,
+  maxSubtreeDepth: number
+) {
+  if (replyCount === 0) {
+    return false
+  }
+
+  const collapseScore =
+    getThreadComplexity(replyCount, descendantCount, maxSubtreeDepth) +
+    depth * 2
+
+  return collapseScore >= 8
+}
+
+export function shouldRenderThreadToggle(
+  depth: number,
+  replyCount: number,
+  descendantCount: number,
+  maxSubtreeDepth: number,
+  isCollapsed: boolean
+) {
+  if (replyCount === 0) {
+    return false
+  }
+
+  if (isCollapsed) {
+    return true
+  }
+
+  const toggleScore = getThreadComplexity(
+    replyCount,
+    descendantCount,
+    maxSubtreeDepth
+  )
+  const threshold = Math.max(3, 6 - depth)
+
+  return toggleScore >= threshold
 }
 
 function pruneCollapsedComments(

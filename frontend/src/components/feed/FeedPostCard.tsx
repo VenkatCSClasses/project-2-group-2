@@ -1,34 +1,34 @@
+import { ChevronDown, ChevronUp, MessageCircle } from "lucide-react";
+import FeedActionMenu from "./FeedActionMenu";
+import FeedCommentThread from "./FeedCommentThread";
+import type { Post, ThreadState, ViewerRole, VoteSelection } from "./types";
 import {
-  ChevronDown,
-  ChevronUp,
-  MessageCircle,
-} from 'lucide-react'
-import FeedActionMenu from './FeedActionMenu'
-import FeedCommentThread from './FeedCommentThread'
-import type { Post, ThreadState, ViewerRole, VoteSelection } from './types'
-import { viewerCanDeleteContent } from './actionPolicy'
-import { formatTimeAgo, getAvatarLetter, renderStars } from './utils'
+  formatTimeAgo,
+  getAvatarLetter,
+  renderStars,
+  viewerCanDeleteContent,
+} from "./utils";
 
 type FeedPostCardProps = {
-  post: Post
-  apiBaseUrl: string
-  thread: ThreadState
-  commentCount: number
-  viewerRole: ViewerRole
-  viewerUsername: string
-  onToggleComments: () => void
-  onVote: (vote: VoteSelection) => void
-  onDeletePost: () => void
-  onReportPost: () => void
-  onDraftChange: (value: string) => void
-  onReplyDraftChange: (commentId: string, value: string) => void
-  onReplyToggle: (commentId: string) => void
-  onCloseReply: () => void
-  onSubmitComment: (parentId?: string) => void
-  onCommentVote: (commentId: string, vote: VoteSelection) => void
-  onDeleteComment: (commentId: string) => void
-  onReportComment: (commentId: string) => void
-}
+  post: Post;
+  apiBaseUrl: string;
+  thread: ThreadState;
+  commentCount: number;
+  viewerRole: ViewerRole;
+  viewerUsername: string;
+  onToggleComments: () => void;
+  onVote: (vote: VoteSelection) => void;
+  onDeletePost: () => void;
+  onReportPost: () => void;
+  onDraftChange: (value: string) => void;
+  onReplyDraftChange: (commentId: string, value: string) => void;
+  onReplyToggle: (commentId: string) => void;
+  onCloseReply: () => void;
+  onSubmitComment: (parentId?: string) => void;
+  onCommentVote: (commentId: string, vote: VoteSelection) => void;
+  onDeleteComment: (commentId: string) => void;
+  onReportComment: (commentId: string) => void;
+};
 
 function FeedPostCard({
   post,
@@ -50,20 +50,20 @@ function FeedPostCard({
   onDeleteComment,
   onReportComment,
 }: FeedPostCardProps) {
-  const username = post.author_username || 'user'
-  const ratingOutOfFive = (post.star_rating / 2).toFixed(1)
-  const hasUpvoted = post.viewer_vote === 'up'
-  const hasDownvoted = post.viewer_vote === 'down'
+  const username = post.author_username || "user";
+  const ratingOutOfFive = (post.star_rating / 2).toFixed(1);
+  const hasUpvoted = post.viewer_vote === "up";
+  const hasDownvoted = post.viewer_vote === "down";
   const imageSrc = post.image_url
-    ? post.image_url.startsWith('http')
+    ? post.image_url.startsWith("http")
       ? post.image_url
       : `${apiBaseUrl}${post.image_url}`
-    : null
+    : null;
   const canDeletePost = viewerCanDeleteContent(
     viewerRole,
     viewerUsername,
     post.author_username
-  )
+  );
 
   return (
     <article className="feed-card">
@@ -103,15 +103,15 @@ function FeedPostCard({
 
           <FeedActionMenu
             menuLabel="Post actions"
-            actionLabel={canDeletePost ? 'Remove post' : 'Report post'}
+            actionLabel={canDeletePost ? "Remove post" : "Report post"}
             danger={canDeletePost}
             onAction={() => {
               if (canDeletePost) {
-                onDeletePost()
-                return
+                onDeletePost();
+                return;
               }
 
-              onReportPost()
+              onReportPost();
             }}
           />
         </div>
@@ -126,7 +126,7 @@ function FeedPostCard({
               <img
                 className="feed-image"
                 src={imageSrc}
-                alt={post.food_item_name || 'Review image'}
+                alt={post.food_item_name || "Review image"}
                 loading="lazy"
               />
             </div>
@@ -136,12 +136,12 @@ function FeedPostCard({
 
       <footer
         className={`feed-card-footer ${
-          thread.isOpen ? 'feed-card-footer-open' : ''
+          thread.isOpen ? "feed-card-footer-open" : ""
         }`}
       >
         <button
           className={`comment-button ${
-            thread.isOpen ? 'comment-button-active' : ''
+            thread.isOpen ? "comment-button-active" : ""
           }`}
           type="button"
           aria-expanded={thread.isOpen}
@@ -155,28 +155,32 @@ function FeedPostCard({
 
         <div className="vote-group">
           <button
-            className={`vote-button ${hasUpvoted ? 'vote-button-active' : ''}`}
+            className={`vote-button ${hasUpvoted ? "vote-button-active" : ""}`}
             type="button"
             aria-pressed={hasUpvoted}
             aria-label={
-              hasUpvoted ? 'Remove upvote from post' : `Upvote post (${post.upvotes} upvotes)`
+              hasUpvoted
+                ? "Remove upvote from post"
+                : `Upvote post (${post.upvotes} upvotes)`
             }
-            onClick={() => onVote(hasUpvoted ? null : 'up')}
+            onClick={() => onVote(hasUpvoted ? null : "up")}
           >
             <ChevronUp className="feed-action-icon" aria-hidden="true" />
             <span className="feed-action-count">{post.upvotes}</span>
           </button>
 
           <button
-            className={`vote-button ${hasDownvoted ? 'vote-button-active' : ''}`}
+            className={`vote-button ${
+              hasDownvoted ? "vote-button-active" : ""
+            }`}
             type="button"
             aria-pressed={hasDownvoted}
             aria-label={
               hasDownvoted
-                ? 'Remove downvote from post'
+                ? "Remove downvote from post"
                 : `Downvote post (${post.downvotes} downvotes)`
             }
-            onClick={() => onVote(hasDownvoted ? null : 'down')}
+            onClick={() => onVote(hasDownvoted ? null : "down")}
           >
             <ChevronDown className="feed-action-icon" aria-hidden="true" />
             <span className="feed-action-count">{post.downvotes}</span>
@@ -202,7 +206,7 @@ function FeedPostCard({
         </div>
       )}
     </article>
-  )
+  );
 }
 
-export default FeedPostCard
+export default FeedPostCard;

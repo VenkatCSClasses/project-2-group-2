@@ -1,12 +1,15 @@
 import { ChevronDown, ChevronRight, ChevronUp } from 'lucide-react'
 import FeedActionMenu from './FeedActionMenu'
 import FeedCommentComposer from './FeedCommentComposer'
-import { viewerCanDeleteContent } from './actionPolicy'
+import { viewerCanDeleteContent } from './utils'
 import {
   formatReplyLabel,
   getCommentParentKey,
   getReplyRegionId,
   getThreadToggleLabel,
+  isLinearReplyChain,
+  shouldAutoCollapseThread,
+  shouldRenderThreadToggle,
   type CollapsedComments,
   type CommentThreadIndex,
 } from './commentThread'
@@ -65,14 +68,43 @@ function FeedCommentTree({
         const username = comment.author_username ?? 'user'
         const isReplying = thread.replyTargetId === comment.id
         const replyDraft = thread.replyDrafts[comment.id] ?? ''
-        const replies = threadIndex.childrenByParent[comment.id] ?? []
-        const replyCount = replies.length
+        const commentStats = threadIndex.statsById[comment.id]
+        const parentStats = parentId ? threadIndex.statsById[parentId] : null
+        const replyCount = commentStats?.replyCount ?? 0
+        const descendantCount = commentStats?.descendantCount ?? 0
+        const maxSubtreeDepth = commentStats?.maxSubtreeDepth ?? 0
         const hasUpvoted = comment.viewer_vote === 'up'
         const hasDownvoted = comment.viewer_vote === 'down'
         const hasReplies = replyCount > 0
-        const defaultCollapsed = depth >= 2
+        const isLinearChain = isLinearReplyChain(
+          replyCount,
+          descendantCount,
+          maxSubtreeDepth
+        )
+        const parentIsLinearChain = parentStats
+          ? isLinearReplyChain(
+              parentStats.replyCount,
+              parentStats.descendantCount,
+              parentStats.maxSubtreeDepth
+            )
+          : false
+        const defaultCollapsed =
+          shouldAutoCollapseThread(
+            depth,
+            replyCount,
+            descendantCount,
+            maxSubtreeDepth
+          ) && !parentIsLinearChain
         const isCollapsed =
           hasReplies && (collapsedById[comment.id] ?? defaultCollapsed)
+        const shouldShowThreadToggle =
+          shouldRenderThreadToggle(
+            depth,
+            replyCount,
+            descendantCount,
+            maxSubtreeDepth,
+            isCollapsed
+          ) && (!parentIsLinearChain || isCollapsed || !isLinearChain)
         const replyRegionId = getReplyRegionId(comment.id)
         const canDeleteComment = viewerCanDeleteContent(
           viewerRole,
@@ -203,7 +235,7 @@ function FeedCommentTree({
                   />
                 )}
 
-                {hasReplies && (
+                {hasReplies && shouldShowThreadToggle && (
                   <div className="feed-comment-thread-toggle-row">
                     <button
                       className={`comment-thread-toggle ${
@@ -212,7 +244,7 @@ function FeedCommentTree({
                       type="button"
                       aria-label={`${
                         isCollapsed ? 'Show' : 'Hide'
-                      } ${formatReplyLabel(replyCount)}`}
+                      } ${formatReplyLabel(descendantCount)}`}
                       aria-expanded={!isCollapsed}
                       aria-controls={replyRegionId}
                       onClick={() => onToggleCollapse(comment.id, isCollapsed)}
@@ -232,7 +264,7 @@ function FeedCommentTree({
                         {getThreadToggleLabel(isCollapsed)}
                       </span>
                       <span className="comment-thread-toggle-meta">
-                        {formatReplyLabel(replyCount)}
+                        {formatReplyLabel(descendantCount)}
                       </span>
                     </button>
                   </div>
