@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import AuthForm from './auth/AuthForm'
 import './AuthPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
@@ -15,8 +16,8 @@ function AuthPage({ onAuthSuccess, onRegisterSuccess }: AuthPageProps) {
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
 
-  async function handleAuth(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleAuth(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
     setMessage('')
 
     try {
@@ -42,69 +43,33 @@ function AuthPage({ onAuthSuccess, onRegisterSuccess }: AuthPageProps) {
       }
 
       localStorage.setItem('accessToken', data.access_token)
+
       if (mode === 'register') {
         onRegisterSuccess(data.access_token)
       } else {
         onAuthSuccess(data.access_token)
       }
+
       setMessage('Success!')
-    } catch (err) {
-      console.error(err)
+    } catch (error) {
+      console.error(error)
       setMessage('Network error')
     }
   }
 
   return (
-    <main className="auth-page">
-      <div className="auth-card">
-        <div className="auth-selector">
-          <button
-            type="button"
-            className={`auth-tab ${mode === 'login' ? 'active' : ''}`}
-            onClick={() => setMode('login')}
-          >
-            Login
-          </button>
-          <button
-            type="button"
-            className={`auth-tab ${mode === 'register' ? 'active' : ''}`}
-            onClick={() => setMode('register')}
-          >
-            Register
-          </button>
-        </div>
-
-        <form onSubmit={handleAuth} className="auth-form">
-          <input
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-
-          {mode === 'register' && (
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          )}
-
-          <button type="submit" className="auth-submit">
-            {mode === 'login' ? 'Login' : 'Register'}
-          </button>
-        </form>
-
-        {message && <p className="auth-message">{message}</p>}
-      </div>
-    </main>
+    <AuthForm
+      mode={mode}
+      username={username}
+      password={password}
+      email={email}
+      onModeChange={setMode}
+      onUsernameChange={setUsername}
+      onPasswordChange={setPassword}
+      onEmailChange={setEmail}
+      onSubmit={handleAuth}
+      message={message}
+    />
   )
 }
 

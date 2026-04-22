@@ -6,15 +6,20 @@ from app.database import get_db
 from app.models import Comment, FoodItem, Report, Review, User
 from app.routes.helpers import get_or_404, parse_uuid, strip
 from app.schemas import ReviewForm
-from app.serde import serialize_comment, serialize_review
-from app.utils import get_current_moderator, get_current_user
+from app.serde import serialize_comment, serialize_comments, serialize_review, serialize_reviews
+from app.utils import get_current_moderator, get_current_user, get_optional_current_user
 
 
 # This will be mounted at "/posts" in main.py, so all routes here will be prefixed with /posts
 router = APIRouter()
 
 @router.get("/")
-async def get_posts(start: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+async def get_posts(
+    start: int = 0,
+    limit: int = 10,
+    current_user: dict | None = Depends(get_optional_current_user),
+    db: Session = Depends(get_db),
+):
     """
     Get a list of posts.
 
@@ -24,7 +29,8 @@ async def get_posts(start: int = 0, limit: int = 10, db: Session = Depends(get_d
     - **limit**: The maximum number of posts to return (default is 10).
     """
     posts = db.query(Review).order_by(Review.created_at.desc()).offset(start).limit(limit).all()
-    results = [serialize_review(db, post) for post in posts]
+    viewer_user_id = parse_uuid(current_user["user_id"]) if current_user else None
+    results = serialize_reviews(db, posts, viewer_user_id=viewer_user_id)
     return {"start": start, "limit": limit, "posts": results}
 
 
@@ -52,7 +58,16 @@ async def create_post(form: ReviewForm = Depends(), item_id: str = "", current_u
     db.commit()
     db.refresh(new_post)
 
-    return {"message": "Post created successfully", "post": serialize_review(db, new_post)}
+    return {
+        "message": "Post created successfully",
+        "post": serialize_review(
+            db,
+            new_post,
+            author=user,
+            food_item=item,
+            comment_count=0,
+        ),
+    }
 
 
 @router.get("/reported")
@@ -97,7 +112,12 @@ async def get_reported_posts(current_moderator: dict = Depends(get_current_moder
 
 
 @router.get("/search")
-async def search_posts(query: str, category: str = None, db: Session = Depends(get_db)):
+async def search_posts(
+    query: str,
+    category: str = None,
+    current_user: dict | None = Depends(get_optional_current_user),
+    db: Session = Depends(get_db),
+):
     """
     Search for posts.
 
@@ -124,7 +144,8 @@ async def search_posts(query: str, category: str = None, db: Session = Depends(g
         search_filter
     ).order_by(Review.created_at.desc()).all()
 
-    results = [serialize_review(db, post) for post in matches]
+    viewer_user_id = parse_uuid(current_user["user_id"]) if current_user else None
+    results = serialize_reviews(db, matches, viewer_user_id=viewer_user_id)
     if category == "item":
         results.sort(key=lambda post: (post["food_item_name"] or "").lower().find(trimmed_query.lower()) != -1, reverse=True)
 
@@ -132,7 +153,11 @@ async def search_posts(query: str, category: str = None, db: Session = Depends(g
 
 
 @router.get("/{post_id}")
-async def get_post(post_id: str, db: Session = Depends(get_db)):
+async def get_post(
+    post_id: str,
+    current_user: dict | None = Depends(get_optional_current_user),
+    db: Session = Depends(get_db),
+):
     """
     Get information about a post.
 
@@ -144,10 +169,11 @@ async def get_post(post_id: str, db: Session = Depends(get_db)):
     post = get_or_404(db, Review, post_id)
 
     comments = db.query(Comment).filter(Comment.review_id == post.id).order_by(Comment.created_at.asc()).all()
+    viewer_user_id = parse_uuid(current_user["user_id"]) if current_user else None
     return {
         "post_id": post.id,
-        "post_info": serialize_review(db, post),
-        "comments": [serialize_comment(db, comment) for comment in comments],
+        "post_info": serialize_reviews(db, [post], viewer_user_id=viewer_user_id)[0],
+        "comments": serialize_comments(db, comments, viewer_user_id=viewer_user_id),
         "count": len(comments),
     }
 
