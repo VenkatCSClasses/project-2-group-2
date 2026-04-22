@@ -23,7 +23,12 @@ const PLACE_NAMES: Record<PlaceKey, string> = {
   terrace: 'Terrace Dining Hall',
 }
 
-function FeedPage({ token, onOpenUpload, onOpenProfile }: FeedPageProps) {
+function FeedPage({
+  token,
+  onOpenUpload,
+  onOpenProfile,
+  onOpenDiningReviews,
+}: FeedPageProps) {
   const [posts, setPosts] = useState<Post[]>([])
   const [threadStates, setThreadStates] = useState<Record<string, ThreadState>>(
     {}
@@ -41,10 +46,12 @@ function FeedPage({ token, onOpenUpload, onOpenProfile }: FeedPageProps) {
   const [currentUserPfp, setCurrentUserPfp] = useState<string | null>(null)
   const [currentUsername, setCurrentUsername] = useState('')
   const [currentUserRole, setCurrentUserRole] = useState<ViewerRole>('')
+
   const authHeaders = useMemo(
     () => (token ? { Authorization: `Bearer ${token}` } : undefined),
     [token]
   )
+
   const jsonHeaders = useMemo(
     () => ({
       ...(authHeaders ?? {}),
@@ -101,37 +108,31 @@ function FeedPage({ token, onOpenUpload, onOpenProfile }: FeedPageProps) {
       const data: PostDetailsResponse = await response.json()
 
       if (!response.ok) {
-        updateThreadState(postId, (current) =>
-          ({
-            ...current,
-            loading: false,
-            error: 'Could not load comments',
-          })
-        )
+        updateThreadState(postId, (current) => ({
+          ...current,
+          loading: false,
+          error: 'Could not load comments',
+        }))
         return
       }
 
       const comments = data.comments ?? []
 
-      updateThreadState(postId, (current) =>
-        ({
-          ...current,
-          loading: false,
-          loaded: true,
-          comments,
-          error: '',
-        })
-      )
+      updateThreadState(postId, (current) => ({
+        ...current,
+        loading: false,
+        loaded: true,
+        comments,
+        error: '',
+      }))
       updatePostCommentCount(postId, data.count ?? comments.length)
     } catch (error) {
       console.error(error)
-      updateThreadState(postId, (current) =>
-        ({
-          ...current,
-          loading: false,
-          error: 'Network error while loading comments',
-        })
-      )
+      updateThreadState(postId, (current) => ({
+        ...current,
+        loading: false,
+        error: 'Network error while loading comments',
+      }))
     }
   }
 
@@ -151,8 +152,7 @@ function FeedPage({ token, onOpenUpload, onOpenProfile }: FeedPageProps) {
         return
       }
 
-      const nextPosts = data.posts ?? []
-      setPosts(nextPosts)
+      setPosts(data.posts ?? [])
     } catch (error) {
       console.error(error)
       setMessage('Network error while loading feed')
@@ -198,6 +198,7 @@ function FeedPage({ token, onOpenUpload, onOpenProfile }: FeedPageProps) {
           headers: authHeaders,
         })
         const data = await response.json()
+
         if (response.ok && data?.username) {
           setCurrentUsername(data.username)
         }
@@ -275,40 +276,34 @@ function FeedPage({ token, onOpenUpload, onOpenProfile }: FeedPageProps) {
       )
 
       if (!response.ok) {
-        updateThreadState(postId, (current) =>
-          ({
-            ...current,
-            error: 'Could not save comment vote',
-          })
-        )
+        updateThreadState(postId, (current) => ({
+          ...current,
+          error: 'Could not save comment vote',
+        }))
         return
       }
 
       const data = await response.json()
 
-      updateThreadState(postId, (current) =>
-        ({
-          ...current,
-          comments: current.comments.map((comment) =>
-            comment.id === commentId
-              ? {
-                  ...comment,
-                  upvotes: data.upvotes ?? comment.upvotes,
-                  downvotes: data.downvotes ?? comment.downvotes,
-                  viewer_vote: data.viewer_vote ?? vote,
-                }
-              : comment
-          ),
-        })
-      )
+      updateThreadState(postId, (current) => ({
+        ...current,
+        comments: current.comments.map((comment) =>
+          comment.id === commentId
+            ? {
+                ...comment,
+                upvotes: data.upvotes ?? comment.upvotes,
+                downvotes: data.downvotes ?? comment.downvotes,
+                viewer_vote: data.viewer_vote ?? vote,
+              }
+            : comment
+        ),
+      }))
     } catch (error) {
       console.error(error)
-      updateThreadState(postId, (current) =>
-        ({
-          ...current,
-          error: 'Network error while voting on comment',
-        })
-      )
+      updateThreadState(postId, (current) => ({
+        ...current,
+        error: 'Network error while voting on comment',
+      }))
     }
   }
 
@@ -379,12 +374,10 @@ function FeedPage({ token, onOpenUpload, onOpenProfile }: FeedPageProps) {
       )
 
       if (!response.ok) {
-        updateThreadState(postId, (current) =>
-          ({
-            ...current,
-            error: 'Could not remove comment',
-          })
-        )
+        updateThreadState(postId, (current) => ({
+          ...current,
+          error: 'Could not remove comment',
+        }))
         return
       }
 
@@ -394,23 +387,21 @@ function FeedPage({ token, onOpenUpload, onOpenProfile }: FeedPageProps) {
       )
       const removedCount = idsToRemove.size
 
-      updateThreadState(postId, (current) =>
-        ({
-          ...current,
-          comments: current.comments.filter(
-            (comment) => !idsToRemove.has(comment.id)
-          ),
-          replyDrafts: Object.fromEntries(
-            Object.entries(current.replyDrafts).filter(
-              ([id]) => !idsToRemove.has(id)
-            )
-          ),
-          replyTargetId:
-            current.replyTargetId && idsToRemove.has(current.replyTargetId)
-              ? null
-              : current.replyTargetId,
-        })
-      )
+      updateThreadState(postId, (current) => ({
+        ...current,
+        comments: current.comments.filter(
+          (comment) => !idsToRemove.has(comment.id)
+        ),
+        replyDrafts: Object.fromEntries(
+          Object.entries(current.replyDrafts).filter(
+            ([id]) => !idsToRemove.has(id)
+          )
+        ),
+        replyTargetId:
+          current.replyTargetId && idsToRemove.has(current.replyTargetId)
+            ? null
+            : current.replyTargetId,
+      }))
 
       const nextCommentCount = Math.max(
         0,
@@ -419,12 +410,10 @@ function FeedPage({ token, onOpenUpload, onOpenProfile }: FeedPageProps) {
       updatePostCommentCount(postId, nextCommentCount)
     } catch (error) {
       console.error(error)
-      updateThreadState(postId, (current) =>
-        ({
-          ...current,
-          error: 'Network error while removing comment',
-        })
-      )
+      updateThreadState(postId, (current) => ({
+        ...current,
+        error: 'Network error while removing comment',
+      }))
     }
   }
 
@@ -444,29 +433,23 @@ function FeedPage({ token, onOpenUpload, onOpenProfile }: FeedPageProps) {
       )
 
       if (!response.ok) {
-        updateThreadState(postId, (current) =>
-          ({
-            ...current,
-            error: 'Could not report comment',
-          })
-        )
+        updateThreadState(postId, (current) => ({
+          ...current,
+          error: 'Could not report comment',
+        }))
         return
       }
 
-      updateThreadState(postId, (current) =>
-        ({
-          ...current,
-          error: 'Comment reported',
-        })
-      )
+      updateThreadState(postId, (current) => ({
+        ...current,
+        error: 'Comment reported',
+      }))
     } catch (error) {
       console.error(error)
-      updateThreadState(postId, (current) =>
-        ({
-          ...current,
-          error: 'Network error while reporting comment',
-        })
-      )
+      updateThreadState(postId, (current) => ({
+        ...current,
+        error: 'Network error while reporting comment',
+      }))
     }
   }
 
@@ -477,12 +460,10 @@ function FeedPage({ token, onOpenUpload, onOpenProfile }: FeedPageProps) {
       : thread.draft.trim()
 
     if (!draft) {
-      updateThreadState(postId, (current) =>
-        ({
-          ...current,
-          error: 'Comment cannot be empty',
-        })
-      )
+      updateThreadState(postId, (current) => ({
+        ...current,
+        error: 'Comment cannot be empty',
+      }))
       return
     }
 
@@ -509,14 +490,12 @@ function FeedPage({ token, onOpenUpload, onOpenProfile }: FeedPageProps) {
       const data = await response.json()
 
       if (!response.ok) {
-        updateThreadState(postId, (current) =>
-          ({
-            ...current,
-            submitting: false,
-            submittingReplyId: null,
-            error: 'Could not post comment',
-          })
-        )
+        updateThreadState(postId, (current) => ({
+          ...current,
+          submitting: false,
+          submittingReplyId: null,
+          error: 'Could not post comment',
+        }))
         return
       }
 
@@ -544,14 +523,12 @@ function FeedPage({ token, onOpenUpload, onOpenProfile }: FeedPageProps) {
       updatePostCommentCount(postId, nextCommentCount)
     } catch (error) {
       console.error(error)
-      updateThreadState(postId, (current) =>
-        ({
-          ...current,
-          submitting: false,
-          submittingReplyId: null,
-          error: 'Network error while posting comment',
-        })
-      )
+      updateThreadState(postId, (current) => ({
+        ...current,
+        submitting: false,
+        submittingReplyId: null,
+        error: 'Network error while posting comment',
+      }))
     }
   }
 
@@ -635,7 +612,12 @@ function FeedPage({ token, onOpenUpload, onOpenProfile }: FeedPageProps) {
             {filterMode === 'latest' ? 'Latest' : 'Top'}
           </button>
 
-          <button className="profile-button" type="button" aria-label="Profile" onClick={onOpenProfile}>
+          <button
+            className="profile-button"
+            type="button"
+            aria-label="Profile"
+            onClick={onOpenProfile}
+          >
             {currentUserPfp ? (
               <img
                 src={
@@ -676,33 +658,27 @@ function FeedPage({ token, onOpenUpload, onOpenProfile }: FeedPageProps) {
                 onDeletePost={() => void handleDeletePost(post.id)}
                 onReportPost={() => void handleReportPost(post.id)}
                 onDraftChange={(value) =>
-                  updateThreadState(post.id, (current) =>
-                    ({
-                      ...current,
-                      draft: value,
-                    })
-                  )
+                  updateThreadState(post.id, (current) => ({
+                    ...current,
+                    draft: value,
+                  }))
                 }
                 onReplyDraftChange={(commentId, value) =>
-                  updateThreadState(post.id, (current) =>
-                    ({
-                      ...current,
-                      replyDrafts: {
-                        ...current.replyDrafts,
-                        [commentId]: value,
-                      },
-                    })
-                  )
+                  updateThreadState(post.id, (current) => ({
+                    ...current,
+                    replyDrafts: {
+                      ...current.replyDrafts,
+                      [commentId]: value,
+                    },
+                  }))
                 }
                 onReplyToggle={(commentId) =>
-                  updateThreadState(post.id, (current) =>
-                    ({
-                      ...current,
-                      replyTargetId:
-                        current.replyTargetId === commentId ? null : commentId,
-                      error: '',
-                    })
-                  )
+                  updateThreadState(post.id, (current) => ({
+                    ...current,
+                    replyTargetId:
+                      current.replyTargetId === commentId ? null : commentId,
+                    error: '',
+                  }))
                 }
                 onCloseReply={() =>
                   updateThreadState(post.id, (current) => ({
@@ -728,53 +704,53 @@ function FeedPage({ token, onOpenUpload, onOpenProfile }: FeedPageProps) {
         </main>
 
         {isUploadPopupOpen && (
-  <div
-    className="upload-popup-overlay"
-    onClick={() => setIsUploadPopupOpen(false)}
-  >
-    <div
-      className="floating-add-wrapper"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="upload-choice-popup">
-        <button
-          type="button"
-          className="upload-choice-button"
-          onClick={() => handleUploadChoice('campus')}
-        >
-          Campus Center
-        </button>
-        <button
-          type="button"
-          className="upload-choice-button"
-          onClick={() => handleUploadChoice('terrace')}
-        >
-          Terraces
-        </button>
-      </div>
+          <div
+            className="upload-popup-overlay"
+            onClick={() => setIsUploadPopupOpen(false)}
+          >
+            <div
+              className="floating-add-wrapper"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="upload-choice-popup">
+                <button
+                  type="button"
+                  className="upload-choice-button"
+                  onClick={() => handleUploadChoice('campus')}
+                >
+                  Campus Center
+                </button>
+                <button
+                  type="button"
+                  className="upload-choice-button"
+                  onClick={() => handleUploadChoice('terrace')}
+                >
+                  Terraces
+                </button>
+              </div>
 
-      <button
-        className="floating-add-button"
-        type="button"
-        onClick={() => setIsUploadPopupOpen(false)}
-      >
-        +
-      </button>
-    </div>
-  </div>
-)}
+              <button
+                className="floating-add-button"
+                type="button"
+                onClick={() => setIsUploadPopupOpen(false)}
+              >
+                +
+              </button>
+            </div>
+          </div>
+        )}
 
-{!isUploadPopupOpen && (
-  <div className="floating-add-wrapper">
-    <button
-      className="floating-add-button"
-      type="button"
-      onClick={() => setIsUploadPopupOpen(true)}
-    >
-      +
-    </button>
-  </div>
-)}
+        {!isUploadPopupOpen && (
+          <div className="floating-add-wrapper">
+            <button
+              className="floating-add-button"
+              type="button"
+              onClick={() => setIsUploadPopupOpen(true)}
+            >
+              +
+            </button>
+          </div>
+        )}
       </div>
 
       {isMenuOpen && (
@@ -815,6 +791,17 @@ function FeedPage({ token, onOpenUpload, onOpenProfile }: FeedPageProps) {
                 Campus Center
               </button>
             </div>
+
+            <button
+              type="button"
+              className="menu-review-page-button"
+              onClick={() => {
+                setIsMenuOpen(false)
+                onOpenDiningReviews()
+              }}
+            >
+              Open Dining Hall Review Page
+            </button>
 
             <div className="menu-items-list">
               {menuLoading && <p className="menu-status">Loading menu...</p>}

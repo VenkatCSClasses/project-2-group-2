@@ -1022,3 +1022,20 @@
 .menu-item-button:hover {
   background: #f9fafb;
 }
+.menu-review-page-button {
+  width: 100%;
+  border: none;
+  background: #111827;
+  color: white;
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-align: left;
+  cursor: pointer;
+  margin-bottom: 18px;
+}
+
+.menu-review-page-button:hover {
+  background: #1f2937;
+}

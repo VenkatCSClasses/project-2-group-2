@@ -10,6 +10,9 @@ from sqlmodel import Session
 from app.models import FoodItem, Review, User
 from uuid import UUID
 from sqlalchemy import or_
+from app.serde import serialize_reviews
+from app.routes.helpers import get_or_404, parse_uuid
+from app.utils import get_current_user, get_current_admin, get_optional_current_user, process_and_save_image
 
 # This will be mounted at "/items" in main.py, so all routes here will be prefixed with /items
 router = APIRouter()
@@ -178,26 +181,43 @@ async def review_item(request: Request, item_id: str, form: ReviewForm = Depends
 
 
 @router.get("/{item_id}/reviews")
-async def get_item_reviews(item_id: str, start: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+async def get_item_reviews(
+    item_id: str,
+    start: int = 0,
+    limit: int = 10,
+    current_user: dict | None = Depends(get_optional_current_user),
+    db: Session = Depends(get_db),
+):
     """
     Get reviews for a food item.
 
-    This endpoint retrieves all reviews for a specific food item.
-
-    - **item_id**: The ID of the item to retrieve reviews for.
+    This endpoint retrieves all reviews for a specific food item
+    in the same serialized format used by the feed posts.
     """
 
     if limit > 100:
-        limit = 100  # Cap the limit to prevent abuse
+        limit = 100
     if limit < 1:
-        limit = 10  # Default to 10 if an invalid limit is provided
+        limit = 10
     if start < 0:
-        start = 0  # Default to 0 if an invalid start is provided
-
+        start = 0
 
     item_id = parse_uuid(item_id)
-
     item = get_or_404(db, FoodItem, item_id)
 
-    reviews = db.query(Review).filter(Review.food_item_id == item.id).offset(start).limit(limit).all()
-    return {"item_id": item_id, "reviews": reviews, "count": len(reviews)}
+    reviews = (
+        db.query(Review)
+        .filter(Review.food_item_id == item.id)
+        .order_by(Review.created_at.desc())
+        .offset(start)
+        .limit(limit)
+        .all()
+    )
+
+    viewer_user_id = parse_uuid(current_user["user_id"]) if current_user else None
+
+    return {
+        "item_id": item_id,
+        "reviews": serialize_reviews(db, reviews, viewer_user_id=viewer_user_id),
+        "count": len(reviews),
+    }
