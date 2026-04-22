@@ -18,67 +18,12 @@ import './FeedPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
-type UploadSelection = {
-  diningHall: string
-  itemId?: string
-  itemName?: string
-}
-
-type FeedPageProps = {
-  token: string
-  onOpenUpload: (selection: UploadSelection) => void
-}
-
-type Post = {
-  id: string
-  author_id: string
-  author_username: string | null
-  food_item_id: string | null
-  food_item_name: string | null
-  star_rating: number
-  content: string | null
-  image_url: string | null
-  created_at: string
-  upvotes: number
-  downvotes: number
-}
-
-type PostsResponse = {
-  start: number
-  limit: number
-  posts: Post[]
-}
-
-type PostDetailsResponse = {
-  count: number
-}
-
-type FoodItem = {
-  id: string
-  name: string
-  description: string | null
-  image_url: string | null
-  average_rating: number | null
-}
-
-type PlaceResponse = {
-  place_id: string
-  place_info: {
-    id: string
-    name: string
-    description: string | null
-    food_items: FoodItem[]
-  }
-}
-
-type PlaceKey = 'campus' | 'terrace'
-
 const PLACE_NAMES: Record<PlaceKey, string> = {
   campus: 'Campus Center Dining Hall',
   terrace: 'Terrace Dining Hall',
 }
 
-function FeedPage({ token, onOpenUpload }: FeedPageProps) {
+function FeedPage({ token, onOpenUpload, onOpenProfile }: FeedPageProps) {
   const [posts, setPosts] = useState<Post[]>([])
   const [threadStates, setThreadStates] = useState<Record<string, ThreadState>>(
     {}

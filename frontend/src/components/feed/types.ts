@@ -7,6 +7,7 @@ export type UploadSelection = {
 export type FeedPageProps = {
   token: string
   onOpenUpload: (selection: UploadSelection) => void
+  onOpenProfile: () => void
 }
 
 export type ViewerRole = 'user' | 'moderator' | 'admin' | ''

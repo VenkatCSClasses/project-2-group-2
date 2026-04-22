@@ -183,6 +183,30 @@ async def change_username(new_username: str, db: Session = Depends(get_db), curr
     return {"message": "Username changed successfully", "username": new_username}
 
 
+@router.post("/change-email")
+async def change_email(new_email: str, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    """
+    Change the email for the current user.
+
+    - **new_email**: The new email to set for the user.
+    """
+
+    user = db.exec(select(User).where(User.id == current_user["user_id"])).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    # Check if the new email is already taken
+    existing_user = db.exec(select(User).where(User.email == new_email)).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already taken")
+
+    user.email = new_email
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    
+    return {"message": "Email changed successfully", "email": new_email}
+
+
 @router.post("/change-pfp")
 async def change_profile_picture(image: UploadFile, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
     """
