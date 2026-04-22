@@ -727,35 +727,54 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
           })}
         </main>
 
-        <div className="floating-add-wrapper">
-          {isUploadPopupOpen && (
-            <div className="upload-choice-popup">
-              <button
-                type="button"
-                className="upload-choice-button"
-                onClick={() => handleUploadChoice('campus')}
-              >
-                Campus Center
-              </button>
-              <button
-                type="button"
-                className="upload-choice-button"
-                onClick={() => handleUploadChoice('terrace')}
-              >
-                Terraces
-              </button>
-            </div>
-          )}
+        {isUploadPopupOpen && (
+  <div
+    className="upload-popup-overlay"
+    onClick={() => setIsUploadPopupOpen(false)}
+  >
+    <div
+      className="floating-add-wrapper"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="upload-choice-popup">
+        <button
+          type="button"
+          className="upload-choice-button"
+          onClick={() => handleUploadChoice('campus')}
+        >
+          Campus Center
+        </button>
+        <button
+          type="button"
+          className="upload-choice-button"
+          onClick={() => handleUploadChoice('terrace')}
+        >
+          Terraces
+        </button>
+      </div>
 
-          <button
-            className="floating-add-button"
-            type="button"
-            onClick={() => setIsUploadPopupOpen((current) => !current)}
-            aria-label="Create review"
-          >
-            +
-          </button>
-        </div>
+      <button
+        className="floating-add-button"
+        type="button"
+        onClick={() => setIsUploadPopupOpen(false)}
+      >
+        +
+      </button>
+    </div>
+  </div>
+)}
+
+{!isUploadPopupOpen && (
+  <div className="floating-add-wrapper">
+    <button
+      className="floating-add-button"
+      type="button"
+      onClick={() => setIsUploadPopupOpen(true)}
+    >
+      +
+    </button>
+  </div>
+)}
       </div>
 
       {isMenuOpen && (
