@@ -82,7 +82,9 @@
 .feed-list {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  width: min(100%, 760px);
+  margin: 0 auto;
+  gap: 16px;
   padding-top: 18px;
 }
 
@@ -96,7 +98,7 @@
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 16px;
-  padding: 18px 16px 16px;
+  padding: 16px 15px 14px;
   overflow: hidden;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
@@ -185,8 +187,9 @@
 .feed-card-content {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-top: 14px;
+  gap: 10px;
+  margin-top: 12px;
+  text-align: left;
 }
 
 .feed-review-text {
@@ -195,21 +198,28 @@
   font-size: 0.98rem;
   color: #111827;
   text-wrap: pretty;
+  text-align: left;
 }
 
 .feed-image-frame {
+  display: grid;
+  place-items: center;
   overflow: hidden;
   border-radius: 12px;
-  background: #f3f4f6;
+  padding: 10px;
+  border: 1px solid #e5e7eb;
+  background:
+    linear-gradient(180deg, #fafafa 0%, #f3f4f6 100%);
 }
 
 .feed-image {
   width: 100%;
   display: block;
-  border-radius: 0;
+  border-radius: 10px;
   border: none;
-  object-fit: cover;
-  max-height: 440px;
+  object-fit: contain;
+  object-position: center;
+  max-height: 420px;
   background: transparent;
 }
 
@@ -218,8 +228,8 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 14px;
+  gap: 10px;
+  margin-top: 12px;
 }
 
 .feed-card-footer-open {
@@ -320,39 +330,39 @@
 .feed-thread {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .feed-card-thread {
-  margin-top: 10px;
-  padding-top: 14px;
+  margin-top: 8px;
+  padding-top: 12px;
   border-top: 1px solid #e2e8f0;
 }
 
 .feed-card-thread .feed-thread {
-  gap: 10px;
+  gap: 8px;
 }
 
 .feed-comment-composer-actions {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .feed-comment-composer .primary-comment-button {
-  min-width: 112px;
+  min-width: 104px;
 }
 
 .feed-comment-composer .feed-comment-input {
-  min-height: 84px;
+  min-height: 72px;
 }
 
 .feed-comments-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .feed-comment-composer,
@@ -363,27 +373,28 @@
 }
 
 .feed-comment-composer {
-  padding: 0 0 12px;
+  padding: 0 0 10px;
   border-bottom: 1px solid #f1f5f9;
 }
 
 .feed-reply-composer {
-  margin-top: 8px;
-  padding: 10px 0 0;
+  margin-top: 6px;
+  padding: 8px 0 0;
 }
 
 .feed-comment-input {
   width: 100%;
   border: 1px solid #dbe4ee;
-  border-radius: 14px;
-  padding: 12px 14px;
-  min-height: 92px;
+  border-radius: 12px;
+  padding: 10px 12px;
+  min-height: 80px;
   resize: vertical;
   background: #fff;
   color: #0f172a;
   outline: none;
   font: inherit;
-  line-height: 1.55;
+  line-height: 1.45;
+  font-size: 0.95rem;
   text-align: left;
   transition:
     border-color 0.18s ease,
@@ -396,7 +407,7 @@
 }
 
 .feed-reply-composer .feed-comment-input {
-  min-height: 72px;
+  min-height: 64px;
 }
 
 .feed-comment-input:focus {
@@ -492,10 +503,11 @@
 
 .primary-comment-button,
 .secondary-comment-button {
-  padding: 9px 12px;
+  padding: 8px 11px;
   font-weight: 700;
   border: none;
   background: transparent;
+  font-size: 0.88rem;
 }
 
 .secondary-comment-button {
@@ -528,14 +540,14 @@
   margin: 0;
   padding: 2px 0 0;
   color: #475569;
-  font-size: 0.88rem;
+  font-size: 0.84rem;
   text-align: left;
 }
 
 .feed-comment {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .feed-comment-reply {
@@ -545,7 +557,7 @@
 .feed-comment-node {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
 }
 
@@ -563,17 +575,17 @@
 }
 
 .feed-comment-avatar {
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   border-radius: 999px;
   display: grid;
   place-items: center;
   background: #f8fafc;
   border: 1px solid #e5e7eb;
   color: #0f172a;
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   font-weight: 800;
-  flex: 0 0 30px;
+  flex: 0 0 26px;
   margin-top: 1px;
 }
 
@@ -588,15 +600,15 @@
 
 .feed-comment-username {
   color: #0f172a;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   font-weight: 700;
 }
 
 .feed-comment-text {
-  margin: 4px 0 0;
+  margin: 3px 0 0;
   color: #111827;
-  line-height: 1.58;
-  font-size: 0.94rem;
+  line-height: 1.5;
+  font-size: 0.9rem;
   text-wrap: pretty;
   text-align: left;
 }
@@ -605,25 +617,25 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 10px;
+  gap: 6px;
   flex-wrap: wrap;
-  margin-top: 7px;
+  margin-top: 5px;
   text-align: left;
 }
 
 .comment-vote-cluster {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px;
+  gap: 2px;
+  padding: 1px;
   border: 1px solid #dbe4ee;
   border-radius: 999px;
   background: white;
 }
 
 .comment-vote-button {
-  min-height: 28px;
-  padding: 0 8px;
+  min-height: 20px;
+  padding: 0 5px;
   border: none;
   border-radius: 999px;
   background: transparent;
@@ -632,10 +644,17 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  font-size: 0.78rem;
+  gap: 2px;
+  font-size: 0.64rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.comment-vote-button .feed-action-icon {
+  width: 0.72rem;
+  height: 0.72rem;
+  stroke-width: 2.3;
 }
 
 .comment-vote-button:hover {
@@ -661,13 +680,15 @@
 
 .comment-action-button {
   padding: 0;
-  font-size: 0.8rem;
+  min-height: 20px;
+  font-size: 0.68rem;
   font-weight: 600;
   border: none;
   background: transparent;
   color: #475569;
   text-align: left;
   letter-spacing: -0.01em;
+  line-height: 1;
 }
 
 .comment-action-button-active {
@@ -683,8 +704,8 @@
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.8rem;
+  gap: 4px;
+  font-size: 0.68rem;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
@@ -707,8 +728,8 @@
 }
 
 .comment-thread-toggle-icon {
-  width: 0.9rem;
-  height: 0.9rem;
+  width: 0.72rem;
+  height: 0.72rem;
   flex: 0 0 auto;
   stroke-width: 2.2;
 }
@@ -717,7 +738,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .feed-comment-thread-toggle-row::before {
@@ -759,9 +780,9 @@
 }
 
 .feed-comment-children {
-  margin-top: 8px;
-  margin-left: 12px;
-  padding-left: 14px;
+  margin-top: 6px;
+  margin-left: 10px;
+  padding-left: 12px;
   border-left: 1px solid #e2e8f0;
   animation: feed-thread-reveal 0.16s ease-out;
 }
@@ -773,16 +794,16 @@
 }
 
 .feed-comment-tree-root {
-  gap: 14px;
+  gap: 12px;
 }
 
 .feed-comment-tree-root > .feed-comment + .feed-comment {
-  padding-top: 14px;
+  padding-top: 12px;
   border-top: 1px solid #f1f5f9;
 }
 
 .feed-comment-tree-nested {
-  gap: 12px;
+  gap: 10px;
 }
 
 @keyframes feed-thread-reveal {
@@ -853,6 +874,11 @@
 @media (max-width: 640px) {
   .feed-page {
     padding: 0 12px 100px;
+  }
+
+  .feed-list {
+    width: 100%;
+    gap: 14px;
   }
 
   .feed-card {
