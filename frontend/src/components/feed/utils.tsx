@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { ThreadState, ViewerRole } from "./types";
 
 export function createInitialThreadState(): ThreadState {
@@ -32,10 +33,31 @@ export function formatTimeAgo(dateString: string): string {
   return created.toLocaleDateString();
 }
 
-export function renderStars(starRating: number): string {
+export function renderStars(starRating: number): ReactNode {
   const fiveStarValue = starRating / 2;
-  const fullStars = Math.round(fiveStarValue);
-  return "★".repeat(fullStars) + "☆".repeat(5 - fullStars);
+  const fullStars = Math.floor(fiveStarValue);
+  const hasHalfStar = fiveStarValue % 1 >= 0.5;
+  const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+
+  return (
+    <>
+      {Array.from({ length: fullStars }).map((_, index) => (
+        <span key={`full-${index}`} className="feed-star-display full">
+          ★
+        </span>
+      ))}
+
+      {hasHalfStar && (
+        <span className="feed-star-display half">★</span>
+      )}
+
+      {Array.from({ length: emptyStars }).map((_, index) => (
+        <span key={`empty-${index}`} className="feed-star-display empty">
+          ★
+        </span>
+      ))}
+    </>
+  );
 }
 
 export function getAvatarLetter(username: string | null): string {
