@@ -23,7 +23,7 @@ const PLACE_NAMES: Record<PlaceKey, string> = {
   terrace: 'Terrace Dining Hall',
 }
 
-function FeedPage({ token, onOpenUpload }: FeedPageProps) {
+function FeedPage({ token, onOpenUpload, onOpenProfile }: FeedPageProps) {
   const [posts, setPosts] = useState<Post[]>([])
   const [threadStates, setThreadStates] = useState<Record<string, ThreadState>>(
     {}
@@ -635,7 +635,7 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
             {filterMode === 'latest' ? 'Latest' : 'Top'}
           </button>
 
-          <button className="profile-button" type="button" aria-label="Profile">
+          <button className="profile-button" type="button" aria-label="Profile" onClick={onOpenProfile}>
             {currentUserPfp ? (
               <img
                 src={
