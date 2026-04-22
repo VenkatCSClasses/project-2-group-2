@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
+import { ChevronDown, ChevronUp, Ellipsis } from 'lucide-react'
 import type { Comment, ThreadState, ViewerRole } from './types'
 import { formatTimeAgo, getAvatarLetter } from './utils'
 
 type FeedCommentThreadProps = {
   thread: ThreadState
-  commentCount: number
   viewerRole: ViewerRole
   onDraftChange: (value: string) => void
   onReplyDraftChange: (commentId: string, value: string) => void
@@ -87,159 +87,167 @@ function FeedCommentTree({
   return (
     <div ref={menuRootRef}>
       {children.map((comment) => {
-    const username = comment.author_username || 'user'
-    const isReplying = thread.replyTargetId === comment.id
-    const replyDraft = thread.replyDrafts[comment.id] ?? ''
-    const replyCount = comments.filter(
-      (candidate) => candidate.parent_id === comment.id
-    ).length
+        const username = comment.author_username || 'user'
+        const isReplying = thread.replyTargetId === comment.id
+        const replyDraft = thread.replyDrafts[comment.id] ?? ''
+        const replyCount = comments.filter(
+          (candidate) => candidate.parent_id === comment.id
+        ).length
 
-    return (
-      <div
-        key={comment.id}
-        className={`feed-comment ${parentId ? 'feed-comment-reply' : ''}`}
-      >
-        <div className="feed-comment-rail" aria-hidden="true" />
-
-        <div className="feed-comment-body">
-          <div className="feed-comment-header">
-            <div className="feed-comment-avatar">
-              {getAvatarLetter(comment.author_username)}
-            </div>
-
-            <div className="feed-comment-meta">
-              <div className="feed-comment-author-row">
-                <span className="feed-comment-username">{username}</span>
-                <span className="feed-time">
-                  {formatTimeAgo(comment.created_at)}
-                </span>
+        return (
+          <div
+            key={comment.id}
+            className={`feed-comment ${parentId ? 'feed-comment-reply' : ''}`}
+          >
+            <article className="feed-comment-node">
+              <div className="feed-comment-avatar">
+                {getAvatarLetter(comment.author_username)}
               </div>
 
-              <p className="feed-comment-text">{comment.text}</p>
-            </div>
+              <div className="feed-comment-main">
+                <div className="feed-comment-topline">
+                  <div className="feed-comment-author-row">
+                    <span className="feed-comment-username">{username}</span>
+                    <span className="feed-meta-separator" aria-hidden="true">
+                      •
+                    </span>
+                    <time className="feed-time" dateTime={comment.created_at}>
+                      {formatTimeAgo(comment.created_at)}
+                    </time>
+                  </div>
+                </div>
 
-            <div className="feed-overflow-menu">
-              <button
-                className="overflow-trigger overflow-trigger-comment"
-                type="button"
-                aria-label="Comment actions"
-                onClick={() =>
-                  setOpenMenuId((current) =>
-                    current === comment.id ? null : comment.id
-                  )
-                }
-              >
-                ⋯
-              </button>
+                <p className="feed-comment-text">{comment.text}</p>
 
-              {openMenuId === comment.id && (
-                <div className="overflow-menu-panel">
+                <div className="feed-comment-actions">
                   <button
-                    className={`overflow-menu-item ${
-                      isModerator ? 'overflow-menu-item-danger' : ''
+                    className="comment-action-button"
+                    type="button"
+                    onClick={() => onCommentVote(comment.id, true)}
+                  >
+                    <ChevronUp className="feed-action-icon" aria-hidden="true" />
+                    <span>{comment.upvotes}</span>
+                  </button>
+
+                  <button
+                    className="comment-action-button"
+                    type="button"
+                    onClick={() => onCommentVote(comment.id, false)}
+                  >
+                    <ChevronDown className="feed-action-icon" aria-hidden="true" />
+                    <span>{comment.downvotes}</span>
+                  </button>
+
+                  <button
+                    className={`comment-action-button ${
+                      isReplying ? 'comment-action-button-active' : ''
                     }`}
                     type="button"
-                    onClick={() => {
-                      setOpenMenuId(null)
-                      if (isModerator) {
-                        onDeleteComment(comment.id)
-                        return
-                      }
-                      onReportComment(comment.id)
-                    }}
+                    onClick={() => onReplyToggle(comment.id)}
                   >
-                    {isModerator ? 'Remove comment' : 'Report comment'}
+                    Reply
                   </button>
+
+                  {replyCount > 0 && (
+                    <span className="feed-comment-count">
+                      {replyCount} repl{replyCount === 1 ? 'y' : 'ies'}
+                    </span>
+                  )}
+
+                  <div className="feed-overflow-menu feed-comment-overflow-menu">
+                    <button
+                      className="overflow-trigger overflow-trigger-comment"
+                      type="button"
+                      aria-label="Comment actions"
+                      aria-expanded={openMenuId === comment.id}
+                      aria-haspopup="menu"
+                      onClick={() =>
+                        setOpenMenuId((current) =>
+                          current === comment.id ? null : comment.id
+                        )
+                      }
+                    >
+                      <Ellipsis className="overflow-icon" aria-hidden="true" />
+                    </button>
+
+                    {openMenuId === comment.id && (
+                      <div className="overflow-menu-panel" role="menu">
+                        <button
+                          className={`overflow-menu-item ${
+                            isModerator ? 'overflow-menu-item-danger' : ''
+                          }`}
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setOpenMenuId(null)
+                            if (isModerator) {
+                              onDeleteComment(comment.id)
+                              return
+                            }
+                            onReportComment(comment.id)
+                          }}
+                        >
+                          {isModerator ? 'Remove comment' : 'Report comment'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
-          </div>
 
-          <div className="feed-comment-actions">
-            <button
-              className="comment-action-button"
-              type="button"
-              onClick={() => onCommentVote(comment.id, true)}
-            >
-              ⬆ {comment.upvotes}
-            </button>
+                {isReplying && (
+                  <div className="feed-reply-composer">
+                    <textarea
+                      className="feed-comment-input"
+                      placeholder={`Reply to ${username}`}
+                      value={replyDraft}
+                      onChange={(event) =>
+                        onReplyDraftChange(comment.id, event.target.value)
+                      }
+                      rows={2}
+                    />
 
-            <button
-              className="comment-action-button"
-              type="button"
-              onClick={() => onCommentVote(comment.id, false)}
-            >
-              ⬇ {comment.downvotes}
-            </button>
+                    <div className="feed-comment-composer-actions">
+                      <button
+                        type="button"
+                        className="secondary-comment-button"
+                        onClick={onCloseReply}
+                      >
+                        Cancel
+                      </button>
 
-            <button
-              className="comment-action-button"
-              type="button"
-              onClick={() => onReplyToggle(comment.id)}
-            >
-              Reply
-            </button>
+                      <button
+                        type="button"
+                        className="primary-comment-button"
+                        disabled={thread.submittingReplyId === comment.id}
+                        onClick={() => onSubmitComment(comment.id)}
+                      >
+                        {thread.submittingReplyId === comment.id
+                          ? 'Posting...'
+                          : 'Post reply'}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
-            {replyCount > 0 && (
-              <span className="feed-comment-count">
-                {replyCount} repl{replyCount === 1 ? 'y' : 'ies'}
-              </span>
-            )}
-          </div>
-
-          {isReplying && (
-            <div className="feed-reply-composer">
-              <textarea
-                className="feed-comment-input"
-                placeholder={`Reply to ${username}`}
-                value={replyDraft}
-                onChange={(event) =>
-                  onReplyDraftChange(comment.id, event.target.value)
-                }
-                rows={2}
-              />
-
-              <div className="feed-comment-composer-actions">
-                <button
-                  type="button"
-                  className="secondary-comment-button"
-                  onClick={onCloseReply}
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="button"
-                  className="primary-comment-button"
-                  disabled={thread.submittingReplyId === comment.id}
-                  onClick={() => onSubmitComment(comment.id)}
-                >
-                  {thread.submittingReplyId === comment.id
-                    ? 'Posting...'
-                    : 'Post reply'}
-                </button>
+                <div className="feed-comment-children">
+                  <FeedCommentTree
+                    comments={comments}
+                    parentId={comment.id}
+                    thread={thread}
+                    viewerRole={viewerRole}
+                    onReplyDraftChange={onReplyDraftChange}
+                    onReplyToggle={onReplyToggle}
+                    onCloseReply={onCloseReply}
+                    onSubmitComment={onSubmitComment}
+                    onCommentVote={onCommentVote}
+                    onDeleteComment={onDeleteComment}
+                    onReportComment={onReportComment}
+                  />
+                </div>
               </div>
-            </div>
-          )}
-
-          <div className="feed-comment-children">
-            <FeedCommentTree
-              comments={comments}
-              parentId={comment.id}
-              thread={thread}
-              viewerRole={viewerRole}
-              onReplyDraftChange={onReplyDraftChange}
-              onReplyToggle={onReplyToggle}
-              onCloseReply={onCloseReply}
-              onSubmitComment={onSubmitComment}
-              onCommentVote={onCommentVote}
-              onDeleteComment={onDeleteComment}
-              onReportComment={onReportComment}
-            />
+            </article>
           </div>
-        </div>
-      </div>
-    )
+        )
       })}
     </div>
   )
@@ -247,7 +255,6 @@ function FeedCommentTree({
 
 function FeedCommentThread({
   thread,
-  commentCount,
   viewerRole,
   onDraftChange,
   onReplyDraftChange,
@@ -263,17 +270,13 @@ function FeedCommentThread({
       <div className="feed-comment-composer">
         <textarea
           className="feed-comment-input"
-          placeholder="Add a comment"
+          placeholder="Write a comment"
           value={thread.draft}
           onChange={(event) => onDraftChange(event.target.value)}
           rows={3}
         />
 
         <div className="feed-comment-composer-actions">
-          <span className="feed-comment-count">
-            {commentCount} comment{commentCount === 1 ? '' : 's'}
-          </span>
-
           <button
             type="button"
             className="primary-comment-button"
@@ -290,7 +293,9 @@ function FeedCommentThread({
       )}
       {thread.error && <p className="feed-thread-status">{thread.error}</p>}
       {!thread.loading && thread.comments.length === 0 && (
-        <p className="feed-thread-status">No comments yet. Start the thread.</p>
+        <p className="feed-thread-status">
+          No comments yet. Be the first to comment.
+        </p>
       )}
 
       <div className="feed-comments-list">
