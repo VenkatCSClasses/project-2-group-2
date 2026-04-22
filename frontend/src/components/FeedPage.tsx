@@ -1,94 +1,33 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import FeedPostCard from './feed/FeedPostCard'
+import { collectCommentSubtreeIds } from './feed/commentThread'
+import type {
+  FeedPageProps,
+  FoodItem,
+  PlaceKey,
+  PlaceResponse,
+  Post,
+  PostDetailsResponse,
+  PostsResponse,
+  ThreadState,
+  VoteSelection,
+  ViewerRole,
+} from './feed/types'
+import { createInitialThreadState } from './feed/utils'
 import './FeedPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
-
-type UploadSelection = {
-  diningHall: string
-  itemId?: string
-  itemName?: string
-}
-
-type FeedPageProps = {
-  token: string
-  onOpenUpload: (selection: UploadSelection) => void
-}
-
-type Post = {
-  id: string
-  author_id: string
-  author_username: string | null
-  food_item_id: string | null
-  food_item_name: string | null
-  star_rating: number
-  content: string | null
-  image_url: string | null
-  created_at: string
-  upvotes: number
-  downvotes: number
-}
-
-type PostsResponse = {
-  start: number
-  limit: number
-  posts: Post[]
-}
-
-type PostDetailsResponse = {
-  count: number
-}
-
-type FoodItem = {
-  id: string
-  name: string
-  description: string | null
-  image_url: string | null
-  average_rating: number | null
-}
-
-type PlaceResponse = {
-  place_id: string
-  place_info: {
-    id: string
-    name: string
-    description: string | null
-    food_items: FoodItem[]
-  }
-}
-
-type PlaceKey = 'campus' | 'terrace'
 
 const PLACE_NAMES: Record<PlaceKey, string> = {
   campus: 'Campus Center Dining Hall',
   terrace: 'Terrace Dining Hall',
 }
 
-function formatTimeAgo(dateString: string): string {
-  const created = new Date(dateString)
-  const now = new Date()
-  const diffMs = now.getTime() - created.getTime()
-
-  const minutes = Math.floor(diffMs / 60000)
-  const hours = Math.floor(diffMs / 3600000)
-  const days = Math.floor(diffMs / 86400000)
-
-  if (minutes < 1) return 'just now'
-  if (minutes < 60) return `${minutes}m`
-  if (hours < 24) return `${hours}h`
-  if (days < 7) return `${days}d`
-
-  return created.toLocaleDateString()
-}
-
-function renderStars(starRating: number): string {
-  const fiveStarValue = starRating / 2
-  const fullStars = Math.round(fiveStarValue)
-  return '★'.repeat(fullStars) + '☆'.repeat(5 - fullStars)
-}
-
 function FeedPage({ token, onOpenUpload }: FeedPageProps) {
   const [posts, setPosts] = useState<Post[]>([])
-  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({})
+  const [threadStates, setThreadStates] = useState<Record<string, ThreadState>>(
+    {}
+  )
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const [filterMode, setFilterMode] = useState<'latest' | 'top'>('latest')
@@ -100,29 +39,110 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
   const [menuError, setMenuError] = useState('')
   const [isUploadPopupOpen, setIsUploadPopupOpen] = useState(false)
   const [currentUserPfp, setCurrentUserPfp] = useState<string | null>(null)
+  const [currentUsername, setCurrentUsername] = useState('')
+  const [currentUserRole, setCurrentUserRole] = useState<ViewerRole>('')
+  const authHeaders = useMemo(
+    () => (token ? { Authorization: `Bearer ${token}` } : undefined),
+    [token]
+  )
+  const jsonHeaders = useMemo(
+    () => ({
+      ...(authHeaders ?? {}),
+      'Content-Type': 'application/json',
+    }),
+    [authHeaders]
+  )
 
-  async function loadUser() {
+  function updateThreadState(
+    postId: string,
+    updater: (current: ThreadState) => ThreadState
+  ) {
+    setThreadStates((current) => ({
+      ...current,
+      [postId]: updater(current[postId] ?? createInitialThreadState()),
+    }))
+  }
+
+  function getThread(
+    postId: string,
+    source: Record<string, ThreadState> = threadStates
+  ): ThreadState {
+    return source[postId] ?? createInitialThreadState()
+  }
+
+  function updatePostCommentCount(postId: string, commentCount: number) {
+    setPosts((current) =>
+      current.map((post) =>
+        post.id === postId
+          ? {
+              ...post,
+              comment_count: commentCount,
+            }
+          : post
+      )
+    )
+  }
+
+  function getPostCommentCount(postId: string): number {
+    return posts.find((post) => post.id === postId)?.comment_count ?? 0
+  }
+
+  async function loadPostDetails(postId: string) {
+    updateThreadState(postId, (current) => ({
+      ...current,
+      loading: true,
+      error: '',
+    }))
+
     try {
-      const response = await fetch(`${API_BASE_URL}/accounts/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+      const response = await fetch(`${API_BASE_URL}/posts/${postId}`, {
+        headers: authHeaders,
       })
-      const data = await response.json()
-      if (response.ok && data?.account_info?.profile_picture) {
-        setCurrentUserPfp(data.account_info.profile_picture)
+      const data: PostDetailsResponse = await response.json()
+
+      if (!response.ok) {
+        updateThreadState(postId, (current) =>
+          ({
+            ...current,
+            loading: false,
+            error: 'Could not load comments',
+          })
+        )
+        return
       }
+
+      const comments = data.comments ?? []
+
+      updateThreadState(postId, (current) =>
+        ({
+          ...current,
+          loading: false,
+          loaded: true,
+          comments,
+          error: '',
+        })
+      )
+      updatePostCommentCount(postId, data.count ?? comments.length)
     } catch (error) {
-      console.error('Failed to load user info', error)
+      console.error(error)
+      updateThreadState(postId, (current) =>
+        ({
+          ...current,
+          loading: false,
+          error: 'Network error while loading comments',
+        })
+      )
     }
   }
 
-  async function loadPosts() {
+  const loadPosts = useCallback(async () => {
     setLoading(true)
     setMessage('')
 
     try {
-      const response = await fetch(`${API_BASE_URL}/posts/`)
+      const response = await fetch(`${API_BASE_URL}/posts/`, {
+        headers: authHeaders,
+      })
       const data: PostsResponse = await response.json()
 
       if (!response.ok) {
@@ -131,21 +151,8 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
         return
       }
 
-      setPosts(data.posts ?? [])
-
-      const countsEntries = await Promise.all(
-        (data.posts ?? []).map(async (post) => {
-          try {
-            const detailResponse = await fetch(`${API_BASE_URL}/posts/${post.id}`)
-            const detailData: PostDetailsResponse = await detailResponse.json()
-            return [post.id, detailData.count ?? 0] as const
-          } catch {
-            return [post.id, 0] as const
-          }
-        })
-      )
-
-      setCommentCounts(Object.fromEntries(countsEntries))
+      const nextPosts = data.posts ?? []
+      setPosts(nextPosts)
     } catch (error) {
       console.error(error)
       setMessage('Network error while loading feed')
@@ -153,9 +160,9 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [authHeaders])
 
-  async function loadMenu(placeKey: PlaceKey) {
+  const loadMenu = useCallback(async (placeKey: PlaceKey) => {
     setMenuLoading(true)
     setMenuError('')
 
@@ -180,30 +187,47 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
     } finally {
       setMenuLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     void loadPosts()
+
+    async function loadUser() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/accounts/me`, {
+          headers: authHeaders,
+        })
+        const data = await response.json()
+        if (response.ok && data?.username) {
+          setCurrentUsername(data.username)
+        }
+        if (response.ok && data?.account_info?.profile_picture) {
+          setCurrentUserPfp(data.account_info.profile_picture)
+        }
+        if (response.ok && data?.account_info?.role) {
+          setCurrentUserRole(data.account_info.role as ViewerRole)
+        }
+      } catch (error) {
+        console.error('Failed to load user info', error)
+      }
+    }
+
     void loadUser()
-  }, [])
+  }, [authHeaders, loadPosts])
 
   useEffect(() => {
     if (isMenuOpen) {
       void loadMenu(selectedPlace)
     }
-  }, [isMenuOpen, selectedPlace])
+  }, [isMenuOpen, loadMenu, selectedPlace])
 
-  async function handleVote(postId: string, upvote: boolean) {
+  async function handleVote(postId: string, vote: VoteSelection) {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/votes/${postId}/vote?upvote=${upvote}`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      )
+      const response = await fetch(`${API_BASE_URL}/posts/${postId}/vote`, {
+        method: 'POST',
+        headers: jsonHeaders,
+        body: JSON.stringify({ vote }),
+      })
 
       if (!response.ok) {
         setMessage('Could not save vote')
@@ -219,6 +243,7 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
                 ...post,
                 upvotes: data.upvotes ?? post.upvotes,
                 downvotes: data.downvotes ?? post.downvotes,
+                viewer_vote: data.viewer_vote ?? vote,
               }
             : post
         )
@@ -226,6 +251,323 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
     } catch (error) {
       console.error(error)
       setMessage('Network error while voting')
+    }
+  }
+
+  async function handleCommentVote(
+    postId: string,
+    commentId: string,
+    vote: VoteSelection
+  ) {
+    updateThreadState(postId, (current) => ({
+      ...current,
+      error: '',
+    }))
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/posts/comments/${commentId}/vote`,
+        {
+          method: 'POST',
+          headers: jsonHeaders,
+          body: JSON.stringify({ vote }),
+        }
+      )
+
+      if (!response.ok) {
+        updateThreadState(postId, (current) =>
+          ({
+            ...current,
+            error: 'Could not save comment vote',
+          })
+        )
+        return
+      }
+
+      const data = await response.json()
+
+      updateThreadState(postId, (current) =>
+        ({
+          ...current,
+          comments: current.comments.map((comment) =>
+            comment.id === commentId
+              ? {
+                  ...comment,
+                  upvotes: data.upvotes ?? comment.upvotes,
+                  downvotes: data.downvotes ?? comment.downvotes,
+                  viewer_vote: data.viewer_vote ?? vote,
+                }
+              : comment
+          ),
+        })
+      )
+    } catch (error) {
+      console.error(error)
+      updateThreadState(postId, (current) =>
+        ({
+          ...current,
+          error: 'Network error while voting on comment',
+        })
+      )
+    }
+  }
+
+  async function handleDeletePost(postId: string) {
+    setMessage('')
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/posts/${postId}/delete`, {
+        method: 'POST',
+        headers: authHeaders,
+      })
+
+      if (!response.ok) {
+        setMessage('Could not remove post')
+        return
+      }
+
+      setPosts((current) => current.filter((post) => post.id !== postId))
+      setThreadStates((current) => {
+        if (!(postId in current)) {
+          return current
+        }
+
+        const next = { ...current }
+        delete next[postId]
+        return next
+      })
+    } catch (error) {
+      console.error(error)
+      setMessage('Network error while removing post')
+    }
+  }
+
+  async function handleReportPost(postId: string) {
+    setMessage('')
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/posts/${postId}/report`, {
+        method: 'POST',
+        headers: authHeaders,
+      })
+
+      if (!response.ok) {
+        setMessage('Could not report post')
+        return
+      }
+
+      setMessage('Post reported')
+    } catch (error) {
+      console.error(error)
+      setMessage('Network error while reporting post')
+    }
+  }
+
+  async function handleDeleteComment(postId: string, commentId: string) {
+    updateThreadState(postId, (current) => ({
+      ...current,
+      error: '',
+    }))
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/posts/comments/${commentId}/delete`,
+        {
+          method: 'POST',
+          headers: authHeaders,
+        }
+      )
+
+      if (!response.ok) {
+        updateThreadState(postId, (current) =>
+          ({
+            ...current,
+            error: 'Could not remove comment',
+          })
+        )
+        return
+      }
+
+      const idsToRemove = collectCommentSubtreeIds(
+        getThread(postId).comments,
+        commentId
+      )
+      const removedCount = idsToRemove.size
+
+      updateThreadState(postId, (current) =>
+        ({
+          ...current,
+          comments: current.comments.filter(
+            (comment) => !idsToRemove.has(comment.id)
+          ),
+          replyDrafts: Object.fromEntries(
+            Object.entries(current.replyDrafts).filter(
+              ([id]) => !idsToRemove.has(id)
+            )
+          ),
+          replyTargetId:
+            current.replyTargetId && idsToRemove.has(current.replyTargetId)
+              ? null
+              : current.replyTargetId,
+        })
+      )
+
+      const nextCommentCount = Math.max(
+        0,
+        getPostCommentCount(postId) - removedCount
+      )
+      updatePostCommentCount(postId, nextCommentCount)
+    } catch (error) {
+      console.error(error)
+      updateThreadState(postId, (current) =>
+        ({
+          ...current,
+          error: 'Network error while removing comment',
+        })
+      )
+    }
+  }
+
+  async function handleReportComment(postId: string, commentId: string) {
+    updateThreadState(postId, (current) => ({
+      ...current,
+      error: '',
+    }))
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/posts/comments/${commentId}/report`,
+        {
+          method: 'POST',
+          headers: authHeaders,
+        }
+      )
+
+      if (!response.ok) {
+        updateThreadState(postId, (current) =>
+          ({
+            ...current,
+            error: 'Could not report comment',
+          })
+        )
+        return
+      }
+
+      updateThreadState(postId, (current) =>
+        ({
+          ...current,
+          error: 'Comment reported',
+        })
+      )
+    } catch (error) {
+      console.error(error)
+      updateThreadState(postId, (current) =>
+        ({
+          ...current,
+          error: 'Network error while reporting comment',
+        })
+      )
+    }
+  }
+
+  async function submitComment(postId: string, parentId?: string) {
+    const thread = getThread(postId)
+    const draft = parentId
+      ? thread.replyDrafts[parentId]?.trim() ?? ''
+      : thread.draft.trim()
+
+    if (!draft) {
+      updateThreadState(postId, (current) =>
+        ({
+          ...current,
+          error: 'Comment cannot be empty',
+        })
+      )
+      return
+    }
+
+    updateThreadState(postId, (current) => ({
+      ...current,
+      error: '',
+      submitting: parentId ? current.submitting : true,
+      submittingReplyId: parentId ?? current.submittingReplyId,
+    }))
+
+    const params = new URLSearchParams({ comment: draft })
+    if (parentId) {
+      params.set('parent_id', parentId)
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/posts/${postId}/comment?${params.toString()}`,
+        {
+          method: 'POST',
+          headers: authHeaders,
+        }
+      )
+      const data = await response.json()
+
+      if (!response.ok) {
+        updateThreadState(postId, (current) =>
+          ({
+            ...current,
+            submitting: false,
+            submittingReplyId: null,
+            error: 'Could not post comment',
+          })
+        )
+        return
+      }
+
+      updateThreadState(postId, (current) => {
+        const nextReplyDrafts = { ...current.replyDrafts }
+
+        if (parentId) {
+          delete nextReplyDrafts[parentId]
+        }
+
+        return {
+          ...current,
+          loaded: true,
+          submitting: false,
+          submittingReplyId: null,
+          comments: [...current.comments, data.comment],
+          draft: parentId ? current.draft : '',
+          replyDrafts: nextReplyDrafts,
+          replyTargetId: parentId ? null : current.replyTargetId,
+          error: '',
+        }
+      })
+
+      const nextCommentCount = getPostCommentCount(postId) + 1
+      updatePostCommentCount(postId, nextCommentCount)
+    } catch (error) {
+      console.error(error)
+      updateThreadState(postId, (current) =>
+        ({
+          ...current,
+          submitting: false,
+          submittingReplyId: null,
+          error: 'Network error while posting comment',
+        })
+      )
+    }
+  }
+
+  async function toggleComments(postId: string) {
+    const thread = getThread(postId)
+    const shouldOpen = !thread.isOpen
+
+    updateThreadState(postId, (current) => ({
+      ...current,
+      isOpen: shouldOpen,
+      error: shouldOpen ? current.error : '',
+      replyTargetId: shouldOpen ? current.replyTargetId : null,
+    }))
+
+    if (shouldOpen && !thread.loading) {
+      await loadPostDetails(postId)
     }
   }
 
@@ -295,8 +637,12 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
 
           <button className="profile-button" type="button" aria-label="Profile">
             {currentUserPfp ? (
-              <img 
-                src={currentUserPfp.startsWith('http') ? currentUserPfp : `${API_BASE_URL}${currentUserPfp}`}
+              <img
+                src={
+                  currentUserPfp.startsWith('http')
+                    ? currentUserPfp
+                    : `${API_BASE_URL}${currentUserPfp}`
+                }
                 alt="Profile"
                 className="profile-circle-img"
               />
@@ -314,78 +660,69 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
           )}
 
           {visiblePosts.map((post) => {
-            const username = post.author_username || 'user'
-            const avatarLetter = username.charAt(0).toUpperCase()
+            const thread = getThread(post.id)
 
             return (
-              <article key={post.id} className="feed-card">
-                <div className="feed-card-header">
-                  <div className="feed-avatar">{avatarLetter}</div>
-
-                  <div className="feed-user-meta">
-                    <div className="feed-user-row">
-                      <span className="feed-username">{username}</span>
-                      <span className="feed-time">
-                        {formatTimeAgo(post.created_at)}
-                      </span>
-                    </div>
-
-                    <div className="feed-rating-row">
-                      <span className="feed-stars">
-                        {renderStars(post.star_rating)}
-                      </span>
-                      <span className="feed-rating-value">
-                        {(post.star_rating / 2).toFixed(1)}
-                      </span>
-                      {post.food_item_name && (
-                        <span className="feed-item-name">
-                          · {post.food_item_name}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {post.content && (
-                  <p className="feed-review-text">{post.content}</p>
-                )}
-
-                {post.image_url && (
-                  <img
-                    className="feed-image"
-                    src={
-                      post.image_url.startsWith('http')
-                        ? post.image_url
-                        : `${API_BASE_URL}${post.image_url}`
-                    }
-                    alt={post.food_item_name || 'Review image'}
-                  />
-                )}
-
-                <div className="feed-card-footer">
-                  <button className="comment-button" type="button">
-                    💬 {commentCounts[post.id] ?? 0}
-                  </button>
-
-                  <div className="vote-group">
-                    <button
-                      className="vote-button"
-                      type="button"
-                      onClick={() => void handleVote(post.id, true)}
-                    >
-                      ⬆ {post.upvotes}
-                    </button>
-
-                    <button
-                      className="vote-button"
-                      type="button"
-                      onClick={() => void handleVote(post.id, false)}
-                    >
-                      ⬇ {post.downvotes}
-                    </button>
-                  </div>
-                </div>
-              </article>
+              <FeedPostCard
+                key={post.id}
+                post={post}
+                apiBaseUrl={API_BASE_URL}
+                thread={thread}
+                commentCount={post.comment_count ?? 0}
+                viewerRole={currentUserRole}
+                viewerUsername={currentUsername}
+                onToggleComments={() => void toggleComments(post.id)}
+                onVote={(upvote) => void handleVote(post.id, upvote)}
+                onDeletePost={() => void handleDeletePost(post.id)}
+                onReportPost={() => void handleReportPost(post.id)}
+                onDraftChange={(value) =>
+                  updateThreadState(post.id, (current) =>
+                    ({
+                      ...current,
+                      draft: value,
+                    })
+                  )
+                }
+                onReplyDraftChange={(commentId, value) =>
+                  updateThreadState(post.id, (current) =>
+                    ({
+                      ...current,
+                      replyDrafts: {
+                        ...current.replyDrafts,
+                        [commentId]: value,
+                      },
+                    })
+                  )
+                }
+                onReplyToggle={(commentId) =>
+                  updateThreadState(post.id, (current) =>
+                    ({
+                      ...current,
+                      replyTargetId:
+                        current.replyTargetId === commentId ? null : commentId,
+                      error: '',
+                    })
+                  )
+                }
+                onCloseReply={() =>
+                  updateThreadState(post.id, (current) => ({
+                    ...current,
+                    replyTargetId: null,
+                  }))
+                }
+                onSubmitComment={(parentId) =>
+                  void submitComment(post.id, parentId)
+                }
+                onCommentVote={(commentId, upvote) =>
+                  void handleCommentVote(post.id, commentId, upvote)
+                }
+                onDeleteComment={(commentId) =>
+                  void handleDeleteComment(post.id, commentId)
+                }
+                onReportComment={(commentId) =>
+                  void handleReportComment(post.id, commentId)
+                }
+              />
             )
           })}
         </main>
@@ -452,10 +789,7 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
             }
           }}
         >
-          <aside
-            className="menu-drawer"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <aside className="menu-drawer" onClick={(e) => e.stopPropagation()}>
             <div className="menu-drawer-header">
               <h2>Today’s Menu</h2>
             </div>

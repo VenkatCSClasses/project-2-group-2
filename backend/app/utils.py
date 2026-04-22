@@ -10,18 +10,32 @@ from uuid import uuid4
 from app.models import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 upload_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
 ph = PasswordHasher()
 
+def _unauthorized_error():
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
-def get_current_user(token: str = Depends(oauth2_scheme)):
+
+def _decode_current_user(token: str | None, required: bool):
     """
-    Get user info from the JWT token, also invalidate the token if the user is banned in the Valkey cache.
+    Decode the JWT token and return the current user payload.
 
     token: The JWT token provided by the client in the Authorization header.
+    required: Whether missing credentials should raise an HTTPException.
 
-    returns: A dictionary containing user_id, role and token if the token is valid and the user is not banned, otherwise raises an HTTPException.
+    returns: A dictionary containing user_id, role and token if the token is valid and the user is not banned.
     """
+    if not token:
+        if required:
+            raise _unauthorized_error()
+        return None
+
     try:
         payload = jwt.decode(
             token, 
@@ -33,11 +47,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         role = payload.get("role")
 
         if user_id is None or role is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Could not validate credentials",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+            raise _unauthorized_error()
 
         try:
             is_banned = cache.sismember("banned_users", str(user_id))
@@ -57,11 +67,29 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         }
         
     except jwt.PyJWTError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise _unauthorized_error()
+
+
+def get_current_user(token: str = Depends(oauth2_scheme)):
+    """
+    Get user info from the JWT token, also invalidate the token if the user is banned in the Valkey cache.
+
+    token: The JWT token provided by the client in the Authorization header.
+
+    returns: A dictionary containing user_id, role and token if the token is valid and the user is not banned, otherwise raises an HTTPException.
+    """
+    return _decode_current_user(token, required=True)
+
+
+def get_optional_current_user(token: str | None = Depends(optional_oauth2_scheme)):
+    """
+    Optionally decode the JWT token and return the current user payload.
+
+    token: The JWT token provided by the client in the Authorization header, if present.
+
+    returns: The current user payload when credentials are provided, otherwise None.
+    """
+    return _decode_current_user(token, required=False)
 
 
 def get_current_moderator(current_user: dict = Depends(get_current_user)):

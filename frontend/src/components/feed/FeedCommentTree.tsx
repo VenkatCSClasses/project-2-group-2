@@ -1,0 +1,303 @@
+import { ChevronDown, ChevronRight, ChevronUp } from 'lucide-react'
+import FeedActionMenu from './FeedActionMenu'
+import FeedCommentComposer from './FeedCommentComposer'
+import { viewerCanDeleteContent } from './utils'
+import {
+  formatReplyLabel,
+  getCommentParentKey,
+  getReplyRegionId,
+  getThreadToggleLabel,
+  isLinearReplyChain,
+  shouldAutoCollapseThread,
+  shouldRenderThreadToggle,
+  type CollapsedComments,
+  type CommentThreadIndex,
+} from './commentThread'
+import type { ThreadState, ViewerRole, VoteSelection } from './types'
+import { formatTimeAgo, getAvatarLetter } from './utils'
+
+type FeedCommentTreeProps = {
+  threadIndex: CommentThreadIndex
+  parentId: string | null
+  depth: number
+  thread: ThreadState
+  viewerRole: ViewerRole
+  viewerUsername: string
+  collapsedById: CollapsedComments
+  onToggleCollapse: (commentId: string, currentCollapsed: boolean) => void
+  onReplyDraftChange: (commentId: string, value: string) => void
+  onReplyToggle: (commentId: string) => void
+  onCloseReply: () => void
+  onSubmitComment: (parentId?: string) => void
+  onCommentVote: (commentId: string, vote: VoteSelection) => void
+  onDeleteComment: (commentId: string) => void
+  onReportComment: (commentId: string) => void
+}
+
+function FeedCommentTree({
+  threadIndex,
+  parentId,
+  depth,
+  thread,
+  viewerRole,
+  viewerUsername,
+  collapsedById,
+  onToggleCollapse,
+  onReplyDraftChange,
+  onReplyToggle,
+  onCloseReply,
+  onSubmitComment,
+  onCommentVote,
+  onDeleteComment,
+  onReportComment,
+}: FeedCommentTreeProps) {
+  const children =
+    threadIndex.childrenByParent[getCommentParentKey(parentId)] ?? []
+
+  if (children.length === 0) {
+    return null
+  }
+
+  return (
+    <div
+      className={`feed-comment-tree ${
+        depth === 0 ? 'feed-comment-tree-root' : 'feed-comment-tree-nested'
+      }`}
+    >
+      {children.map((comment) => {
+        const username = comment.author_username ?? 'user'
+        const isReplying = thread.replyTargetId === comment.id
+        const replyDraft = thread.replyDrafts[comment.id] ?? ''
+        const commentStats = threadIndex.statsById[comment.id]
+        const parentStats = parentId ? threadIndex.statsById[parentId] : null
+        const replyCount = commentStats?.replyCount ?? 0
+        const descendantCount = commentStats?.descendantCount ?? 0
+        const maxSubtreeDepth = commentStats?.maxSubtreeDepth ?? 0
+        const hasUpvoted = comment.viewer_vote === 'up'
+        const hasDownvoted = comment.viewer_vote === 'down'
+        const hasReplies = replyCount > 0
+        const isLinearChain = isLinearReplyChain(
+          replyCount,
+          descendantCount,
+          maxSubtreeDepth
+        )
+        const parentIsLinearChain = parentStats
+          ? isLinearReplyChain(
+              parentStats.replyCount,
+              parentStats.descendantCount,
+              parentStats.maxSubtreeDepth
+            )
+          : false
+        const defaultCollapsed =
+          shouldAutoCollapseThread(
+            depth,
+            replyCount,
+            descendantCount,
+            maxSubtreeDepth
+          ) && !parentIsLinearChain
+        const isCollapsed =
+          hasReplies && (collapsedById[comment.id] ?? defaultCollapsed)
+        const shouldShowThreadToggle =
+          shouldRenderThreadToggle(
+            depth,
+            replyCount,
+            descendantCount,
+            maxSubtreeDepth,
+            isCollapsed
+          ) && (!parentIsLinearChain || isCollapsed || !isLinearChain)
+        const replyRegionId = getReplyRegionId(comment.id)
+        const canDeleteComment = viewerCanDeleteContent(
+          viewerRole,
+          viewerUsername,
+          comment.author_username
+        )
+
+        return (
+          <div
+            key={comment.id}
+            className={`feed-comment ${parentId ? 'feed-comment-reply' : ''}`}
+          >
+            <article className="feed-comment-node">
+              <div className="feed-comment-avatar">
+                {getAvatarLetter(comment.author_username)}
+              </div>
+
+              <div className="feed-comment-main">
+                <div className="feed-comment-topline">
+                  <div className="feed-comment-author-row">
+                    <span className="feed-comment-username">{username}</span>
+                    <span className="feed-meta-separator" aria-hidden="true">
+                      •
+                    </span>
+                    <time className="feed-time" dateTime={comment.created_at}>
+                      {formatTimeAgo(comment.created_at)}
+                    </time>
+                  </div>
+                </div>
+
+                <p className="feed-comment-text">{comment.text}</p>
+
+                <div
+                  className="feed-comment-actions"
+                  role="group"
+                  aria-label="Comment actions"
+                >
+                  <div
+                    className="comment-vote-cluster"
+                    role="group"
+                    aria-label="Comment votes"
+                  >
+                    <button
+                      className={`comment-vote-button ${
+                        hasUpvoted ? 'comment-vote-button-active' : ''
+                      }`}
+                      type="button"
+                      aria-pressed={hasUpvoted}
+                      aria-label={
+                        hasUpvoted
+                          ? 'Remove upvote from comment'
+                          : `Upvote comment (${comment.upvotes} upvotes)`
+                      }
+                      onClick={() =>
+                        onCommentVote(comment.id, hasUpvoted ? null : 'up')
+                      }
+                    >
+                      <ChevronUp className="feed-action-icon" aria-hidden="true" />
+                      <span className="feed-action-count">{comment.upvotes}</span>
+                    </button>
+
+                    <button
+                      className={`comment-vote-button ${
+                        hasDownvoted ? 'comment-vote-button-active' : ''
+                      }`}
+                      type="button"
+                      aria-pressed={hasDownvoted}
+                      aria-label={
+                        hasDownvoted
+                          ? 'Remove downvote from comment'
+                          : `Downvote comment (${comment.downvotes} downvotes)`
+                      }
+                      onClick={() =>
+                        onCommentVote(comment.id, hasDownvoted ? null : 'down')
+                      }
+                    >
+                      <ChevronDown
+                        className="feed-action-icon"
+                        aria-hidden="true"
+                      />
+                      <span className="feed-action-count">
+                        {comment.downvotes}
+                      </span>
+                    </button>
+                  </div>
+
+                  <button
+                    className={`comment-action-button ${
+                      isReplying ? 'comment-action-button-active' : ''
+                    }`}
+                    type="button"
+                    onClick={() => onReplyToggle(comment.id)}
+                  >
+                    Reply
+                  </button>
+
+                  <FeedActionMenu
+                    className="feed-overflow-menu feed-comment-overflow-menu"
+                    triggerClassName="overflow-trigger overflow-trigger-comment"
+                    menuLabel="Comment actions"
+                    actionLabel={
+                      canDeleteComment ? 'Remove comment' : 'Report comment'
+                    }
+                    danger={canDeleteComment}
+                    onAction={() => {
+                      if (canDeleteComment) {
+                        onDeleteComment(comment.id)
+                        return
+                      }
+
+                      onReportComment(comment.id)
+                    }}
+                  />
+                </div>
+
+                {isReplying && (
+                  <FeedCommentComposer
+                    className="feed-reply-composer"
+                    value={replyDraft}
+                    placeholder={`Reply to ${username}`}
+                    submitLabel="Post reply"
+                    submittingLabel="Posting..."
+                    isSubmitting={thread.submittingReplyId === comment.id}
+                    onChange={(value) => onReplyDraftChange(comment.id, value)}
+                    onSubmit={() => onSubmitComment(comment.id)}
+                    onCancel={onCloseReply}
+                    rows={2}
+                  />
+                )}
+
+                {hasReplies && shouldShowThreadToggle && (
+                  <div className="feed-comment-thread-toggle-row">
+                    <button
+                      className={`comment-thread-toggle ${
+                        isCollapsed ? 'comment-thread-toggle-collapsed' : ''
+                      }`}
+                      type="button"
+                      aria-label={`${
+                        isCollapsed ? 'Show' : 'Hide'
+                      } ${formatReplyLabel(descendantCount)}`}
+                      aria-expanded={!isCollapsed}
+                      aria-controls={replyRegionId}
+                      onClick={() => onToggleCollapse(comment.id, isCollapsed)}
+                    >
+                      {isCollapsed ? (
+                        <ChevronRight
+                          className="comment-thread-toggle-icon"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <ChevronDown
+                          className="comment-thread-toggle-icon"
+                          aria-hidden="true"
+                        />
+                      )}
+                      <span className="comment-thread-toggle-label">
+                        {getThreadToggleLabel(isCollapsed)}
+                      </span>
+                      <span className="comment-thread-toggle-meta">
+                        {formatReplyLabel(descendantCount)}
+                      </span>
+                    </button>
+                  </div>
+                )}
+
+                {hasReplies && !isCollapsed && (
+                  <div className="feed-comment-children" id={replyRegionId}>
+                    <FeedCommentTree
+                      threadIndex={threadIndex}
+                      parentId={comment.id}
+                      depth={depth + 1}
+                      thread={thread}
+                      viewerRole={viewerRole}
+                      viewerUsername={viewerUsername}
+                      collapsedById={collapsedById}
+                      onToggleCollapse={onToggleCollapse}
+                      onReplyDraftChange={onReplyDraftChange}
+                      onReplyToggle={onReplyToggle}
+                      onCloseReply={onCloseReply}
+                      onSubmitComment={onSubmitComment}
+                      onCommentVote={onCommentVote}
+                      onDeleteComment={onDeleteComment}
+                      onReportComment={onReportComment}
+                    />
+                  </div>
+                )}
+              </div>
+            </article>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+export default FeedCommentTree

@@ -1,95 +1,26 @@
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import type { ChangeEvent, FormEvent } from 'react'
+import DiningHallPicker from './rating-upload/DiningHallPicker'
+import ItemPicker from './rating-upload/ItemPicker'
+import StarRatingInput from './rating-upload/StarRatingInput'
+import type {
+  FormDataState,
+  FormErrors,
+  ItemResult,
+  PlaceInfoResponse,
+  PlaceResult,
+  PlaceSearchResponse,
+  RatingUploadPageProps,
+} from './rating-upload/types'
+import {
+  getPlaceResults,
+  initialFormState,
+  parseJsonResponse,
+  validateForm,
+} from './rating-upload/utils'
 import './RatingUploadPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
-
-type RatingUploadPageProps = {
-  token: string
-  onBack: () => void
-  initialDiningHall?: string
-  initialItemId?: string
-  initialItemName?: string
-}
-
-type FormDataState = {
-  itemId: string
-  itemName: string
-  diningHall: string
-  rating: string
-  description: string
-  image: File | null
-}
-
-type FormErrors = {
-  diningHall?: string
-  itemId?: string
-  rating?: string
-}
-
-type ItemResult = {
-  id: string
-  name: string
-  description?: string | null
-  image_url?: string | null
-  food_place_id?: string | null
-}
-
-type PlaceResult = {
-  id: string
-  name: string
-  description?: string | null
-  image_url?: string | null
-}
-
-type PlaceInfoResponse = {
-  place_id?: string
-  place_info?: {
-    id?: string
-    name?: string
-    description?: string | null
-    image_url?: string | null
-    food_items?: ItemResult[]
-  }
-}
-
-const initialFormState: FormDataState = {
-  itemId: '',
-  itemName: '',
-  diningHall: '',
-  rating: '',
-  description: '',
-  image: null,
-}
-
-function validateForm(
-  formData: FormDataState,
-  selectedPlaceId: string
-): FormErrors {
-  const errors: FormErrors = {}
-
-  if (!selectedPlaceId) {
-    errors.diningHall = 'Dining hall selection is required'
-  }
-
-  if (!formData.itemId.trim()) {
-    errors.itemId = 'Food item selection is required'
-  }
-
-  if (!formData.rating.trim()) {
-    errors.rating = 'Rating is required'
-  } else {
-    const numericRating = Number(formData.rating)
-    if (
-      !Number.isFinite(numericRating) ||
-      numericRating < 0.5 ||
-      numericRating > 5
-    ) {
-      errors.rating = 'Rating must be between 0.5 and 5 stars'
-    }
-  }
-
-  return errors
-}
 
 function RatingUploadPage({
   token,
@@ -119,81 +50,66 @@ function RatingUploadPage({
   const [hoverRating, setHoverRating] = useState<number | null>(null)
 
   useEffect(() => {
-    setFormData((prev) => ({
-      ...prev,
+    setFormData((current) => ({
+      ...current,
       diningHall: initialDiningHall,
       itemId: initialItemId,
       itemName: initialItemName,
     }))
   }, [initialDiningHall, initialItemId, initialItemName])
 
-  function handleChange(
-    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) {
-    const { name, value } = event.target
+  useEffect(() => {
+    const query = formData.diningHall.trim()
+    const selectedMatchesQuery =
+      query.length > 0 &&
+      selectedPlaceName.length > 0 &&
+      query.toLowerCase() === selectedPlaceName.toLowerCase()
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
-
-    if (name === 'diningHall') {
+    if (!query || selectedMatchesQuery) {
       setPlaceResults([])
-      setSelectedPlaceId('')
-      setSelectedPlaceName('')
-      setMenuItems([])
-      setShowItemPicker(false)
-
-      setFormData((prev) => ({
-        ...prev,
-        diningHall: value,
-        itemId: '',
-        itemName: '',
-      }))
+      setIsSearchingPlaces(false)
+      return
     }
 
-    if (name === 'itemName') {
-      setFormData((prev) => ({
-        ...prev,
-        itemName: value,
-        itemId: '',
-      }))
-    }
-  }
+    let isCancelled = false
 
-  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0] ?? null
-    setFormData((prev) => ({
-      ...prev,
-      image: file,
-    }))
-  }
+    async function searchPlaces() {
+      setIsSearchingPlaces(true)
 
-  function handleStarClick(value: number) {
-    setFormData((prev) => ({
-      ...prev,
-      rating: value.toString(),
-    }))
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/places/search?query=${encodeURIComponent(query)}`
+        )
+        const data = await parseJsonResponse<PlaceSearchResponse>(response)
 
-    setErrors((prev) => ({
-      ...prev,
-      rating: undefined,
-    }))
-  }
+        if (isCancelled) {
+          return
+        }
 
-  function getStarFill(starNumber: number) {
-    const activeValue = hoverRating ?? (Number(formData.rating) || 0)
+        if (!response.ok) {
+          setPlaceResults([])
+          return
+        }
 
-    if (activeValue >= starNumber) {
-      return 'full'
+        setPlaceResults(getPlaceResults(data))
+      } catch (error) {
+        console.error('place search error:', error)
+        if (!isCancelled) {
+          setPlaceResults([])
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsSearchingPlaces(false)
+        }
+      }
     }
 
-    if (activeValue === starNumber - 0.5) {
-      return 'half'
-    }
+    void searchPlaces()
 
-    return 'empty'
-  }
+    return () => {
+      isCancelled = true
+    }
+  }, [formData.diningHall, selectedPlaceName])
 
   async function handleSelectPlace(place: PlaceResult) {
     setSubmitMessage('')
@@ -203,13 +119,15 @@ function RatingUploadPage({
     setPlaceResults([])
     setShowItemPicker(true)
 
-    setFormData((prev) => ({
-      ...prev,
+    setFormData((current) => ({
+      ...current,
       diningHall: place.name,
+      itemId: '',
+      itemName: '',
     }))
 
-    setErrors((prev) => ({
-      ...prev,
+    setErrors((current) => ({
+      ...current,
       diningHall: undefined,
       itemId: undefined,
     }))
@@ -218,31 +136,15 @@ function RatingUploadPage({
       const response = await fetch(
         `${API_BASE_URL}/places/${encodeURIComponent(place.name)}`
       )
-
-      const rawText = await response.text()
-      let data: unknown = null
-
-      try {
-        data = rawText ? JSON.parse(rawText) : null
-      } catch {
-        setSubmitMessage('Dining hall menu returned an invalid response')
-        setMenuItems([])
-        return
-      }
+      const data = await parseJsonResponse<PlaceInfoResponse>(response)
 
       if (!response.ok) {
-        const errorData = data as { detail?: string; message?: string } | null
-        setSubmitMessage(
-          errorData?.detail ||
-            errorData?.message ||
-            'Failed to load dining hall menu'
-        )
+        setSubmitMessage('Failed to load dining hall menu')
         setMenuItems([])
         return
       }
 
-      const placeInfoData = data as PlaceInfoResponse | null
-      const items = placeInfoData?.place_info?.food_items ?? []
+      const items = data?.place_info?.food_items ?? []
       setMenuItems(items)
 
       if (initialItemId || initialItemName) {
@@ -255,15 +157,15 @@ function RatingUploadPage({
           )
 
         if (matchedItem) {
-          setFormData((prev) => ({
-            ...prev,
+          setFormData((current) => ({
+            ...current,
             itemId: matchedItem.id,
             itemName: matchedItem.name,
           }))
           setShowItemPicker(false)
         } else {
-          setFormData((prev) => ({
-            ...prev,
+          setFormData((current) => ({
+            ...current,
             itemId: '',
             itemName: initialItemName,
           }))
@@ -281,27 +183,16 @@ function RatingUploadPage({
 
   useEffect(() => {
     async function preloadDiningHall() {
-      if (!initialDiningHall.trim()) return
+      if (!initialDiningHall.trim()) {
+        return
+      }
 
       try {
         const response = await fetch(
           `${API_BASE_URL}/places/search?query=${encodeURIComponent(initialDiningHall)}`
         )
-
-        const rawText = await response.text()
-        const data: unknown = rawText ? JSON.parse(rawText) : null
-
-        let results: PlaceResult[] = []
-
-        if (Array.isArray(data)) {
-          results = data as PlaceResult[]
-        } else if (
-          data &&
-          typeof data === 'object' &&
-          Array.isArray((data as { results?: unknown[] }).results)
-        ) {
-          results = (data as { results: PlaceResult[] }).results
-        }
+        const data = await parseJsonResponse<PlaceSearchResponse>(response)
+        const results = getPlaceResults(data)
 
         const exactMatch =
           results.find(
@@ -310,7 +201,72 @@ function RatingUploadPage({
           ) ?? results[0]
 
         if (exactMatch) {
-          await handleSelectPlace(exactMatch)
+          setSubmitMessage('')
+          setIsLoadingMenu(true)
+          setSelectedPlaceId(exactMatch.id)
+          setSelectedPlaceName(exactMatch.name)
+          setPlaceResults([])
+          setShowItemPicker(true)
+
+          setFormData((current) => ({
+            ...current,
+            diningHall: exactMatch.name,
+            itemId: '',
+            itemName: '',
+          }))
+
+          setErrors((current) => ({
+            ...current,
+            diningHall: undefined,
+            itemId: undefined,
+          }))
+
+          try {
+            const placeResponse = await fetch(
+              `${API_BASE_URL}/places/${encodeURIComponent(exactMatch.name)}`
+            )
+            const placeData = await parseJsonResponse<PlaceInfoResponse>(
+              placeResponse
+            )
+
+            if (!placeResponse.ok) {
+              setSubmitMessage('Failed to load dining hall menu')
+              setMenuItems([])
+              return
+            }
+
+            const items = placeData?.place_info?.food_items ?? []
+            setMenuItems(items)
+
+            const matchedItem =
+              items.find((item) => item.id === initialItemId) ||
+              items.find(
+                (item) =>
+                  item.name.trim().toLowerCase() ===
+                  initialItemName.trim().toLowerCase()
+              )
+
+            if (matchedItem) {
+              setFormData((current) => ({
+                ...current,
+                itemId: matchedItem.id,
+                itemName: matchedItem.name,
+              }))
+              setShowItemPicker(false)
+            } else {
+              setFormData((current) => ({
+                ...current,
+                itemId: '',
+                itemName: initialItemName,
+              }))
+            }
+          } catch (error) {
+            console.error('preload place details error:', error)
+            setSubmitMessage('Network error while loading dining hall menu')
+            setMenuItems([])
+          } finally {
+            setIsLoadingMenu(false)
+          }
         }
       } catch (error) {
         console.error('preload dining hall error:', error)
@@ -334,19 +290,75 @@ function RatingUploadPage({
     })
   }, [menuItems, formData.itemName])
 
+  function handleDiningHallChange(value: string) {
+    setFormData((current) => ({
+      ...current,
+      diningHall: value,
+      itemId: '',
+      itemName: '',
+    }))
+    setSelectedPlaceId('')
+    setSelectedPlaceName('')
+    setMenuItems([])
+    setShowItemPicker(false)
+  }
+
+  function handleItemNameChange(value: string) {
+    setFormData((current) => ({
+      ...current,
+      itemName: value,
+      itemId: '',
+    }))
+
+    if (selectedPlaceId) {
+      setShowItemPicker(true)
+    }
+  }
+
+  function handleTextChange(
+    event: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
+  ) {
+    const { name, value } = event.target
+
+    setFormData((current) => ({
+      ...current,
+      [name]: value,
+    }))
+  }
+
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null
+    setFormData((current) => ({
+      ...current,
+      image: file,
+    }))
+  }
+
   function handleSelectItem(item: ItemResult) {
-    setFormData((prev) => ({
-      ...prev,
+    setFormData((current) => ({
+      ...current,
       itemId: item.id,
       itemName: item.name,
     }))
 
-    setErrors((prev) => ({
-      ...prev,
+    setErrors((current) => ({
+      ...current,
       itemId: undefined,
     }))
 
     setShowItemPicker(false)
+  }
+
+  function handleStarClick(value: number) {
+    setFormData((current) => ({
+      ...current,
+      rating: value.toString(),
+    }))
+
+    setErrors((current) => ({
+      ...current,
+      rating: undefined,
+    }))
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -386,23 +398,13 @@ function RatingUploadPage({
           body: requestBody,
         }
       )
-
-      const rawText = await response.text()
-      let data: unknown = null
-
-      try {
-        data = rawText ? JSON.parse(rawText) : null
-      } catch {
-        setSubmitMessage('Submit returned an invalid response from the server')
-        return
-      }
+      const data = await parseJsonResponse<{ detail?: string; message?: string }>(
+        response
+      )
 
       if (!response.ok) {
-        const errorData = data as { detail?: string; message?: string } | null
         setSubmitMessage(
-          errorData?.detail ||
-            errorData?.message ||
-            'Failed to submit review'
+          data?.detail || data?.message || 'Failed to submit review'
         )
         return
       }
@@ -440,135 +442,37 @@ function RatingUploadPage({
         </div>
 
         <form className="rating-form" onSubmit={handleSubmit} noValidate>
-          <div className="form-group">
-            <label htmlFor="diningHall">Dining Hall</label>
+          <DiningHallPicker
+            value={formData.diningHall}
+            selectedPlaceName={selectedPlaceName}
+            placeResults={placeResults}
+            isSearchingPlaces={isSearchingPlaces}
+            errors={errors}
+            onChange={handleDiningHallChange}
+            onSelectPlace={(place) => void handleSelectPlace(place)}
+          />
 
-            <div className="search-row">
-              <input
-                id="diningHall"
-                name="diningHall"
-                type="text"
-                value={formData.diningHall}
-                onChange={handleChange}
-                placeholder="Search for a dining hall"
-              />
-            </div>
+          <ItemPicker
+            selectedPlaceId={selectedPlaceId}
+            selectedItemId={formData.itemId}
+            itemName={formData.itemName}
+            filteredMenuItems={filteredMenuItems}
+            menuItems={menuItems}
+            isLoadingMenu={isLoadingMenu}
+            showItemPicker={showItemPicker}
+            errors={errors}
+            onItemNameChange={handleItemNameChange}
+            onSelectItem={handleSelectItem}
+            onShowPicker={() => setShowItemPicker(true)}
+          />
 
-            {errors.diningHall && <p className="field-error">{errors.diningHall}</p>}
-          </div>
-
-          {selectedPlaceName && (
-            <p className="selected-text">
-              Selected dining hall: <strong>{selectedPlaceName}</strong>
-            </p>
-          )}
-
-          <div className="form-group">
-            <label htmlFor="itemName">Food Item</label>
-            <input
-              id="itemName"
-              name="itemName"
-              type="text"
-              value={formData.itemName}
-              onChange={handleChange}
-              placeholder={
-                selectedPlaceId
-                  ? 'Filter items from the selected dining hall'
-                  : 'Select a dining hall first'
-              }
-              disabled={!selectedPlaceId}
-            />
-            {errors.itemId && <p className="field-error">{errors.itemId}</p>}
-          </div>
-
-          {selectedPlaceId && formData.itemId && !showItemPicker && (
-            <div className="selected-item-row">
-              <p className="selected-text">
-                Selected food item: <strong>{formData.itemName}</strong>
-              </p>
-              <button
-                type="button"
-                className="change-item-button"
-                onClick={() => setShowItemPicker(true)}
-              >
-                Change food item
-              </button>
-            </div>
-          )}
-
-          {isLoadingMenu && <p className="helper-text">Loading menu...</p>}
-
-          {selectedPlaceId &&
-            !isLoadingMenu &&
-            showItemPicker &&
-            filteredMenuItems.length > 0 && (
-              <div className="result-box">
-                <p className="result-label">
-                  {formData.itemId ? 'Change food item' : 'Select a food item'}
-                </p>
-                <ul className="result-list">
-                  {filteredMenuItems.map((item) => (
-                    <li key={item.id} className="result-item">
-                      <button
-                        type="button"
-                        className="result-button"
-                        onClick={() => handleSelectItem(item)}
-                      >
-                        {item.name}
-                      </button>
-                      {item.description ? (
-                        <span className="result-description">
-                          {item.description}
-                        </span>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-          {selectedPlaceId && !isLoadingMenu && menuItems.length === 0 && (
-            <p className="helper-text">No menu items found for this dining hall.</p>
-          )}
-
-          <div className="form-group rating-group">
-            <label className="center-label">Rating</label>
-
-            <div
-              className="star-rating"
-              onMouseLeave={() => setHoverRating(null)}
-            >
-              {[1, 2, 3, 4, 5].map((starNumber) => {
-                const fillType = getStarFill(starNumber)
-
-                return (
-                  <div key={starNumber} className="star-wrapper">
-                    <button
-                      type="button"
-                      className="star-half left-half"
-                      onMouseEnter={() => setHoverRating(starNumber - 0.5)}
-                      onClick={() => handleStarClick(starNumber - 0.5)}
-                      aria-label={`Rate ${starNumber - 0.5} stars`}
-                    />
-                    <button
-                      type="button"
-                      className="star-half right-half"
-                      onMouseEnter={() => setHoverRating(starNumber)}
-                      onClick={() => handleStarClick(starNumber)}
-                      aria-label={`Rate ${starNumber} stars`}
-                    />
-                    <span className={`star-display ${fillType}`}>★</span>
-                  </div>
-                )
-              })}
-            </div>
-
-            <p className="rating-value">
-              {formData.rating ? `${formData.rating} / 5` : 'Select a rating'}
-            </p>
-
-            {errors.rating && <p className="field-error">{errors.rating}</p>}
-          </div>
+          <StarRatingInput
+            rating={formData.rating}
+            hoverRating={hoverRating}
+            error={errors.rating}
+            onHoverChange={setHoverRating}
+            onSelect={handleStarClick}
+          />
 
           <div className="form-group">
             <label htmlFor="description">Description</label>
@@ -576,7 +480,7 @@ function RatingUploadPage({
               id="description"
               name="description"
               value={formData.description}
-              onChange={handleChange}
+              onChange={handleTextChange}
               placeholder="Write a short review"
               rows={5}
             />

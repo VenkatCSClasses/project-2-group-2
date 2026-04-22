@@ -55,7 +55,15 @@ async def comment_on_post(
     db.commit()
     db.refresh(new_comment)
 
-    return {"message": "Comment added successfully", "comment": serialize_comment(db, new_comment)}
+    return {
+        "message": "Comment added successfully",
+        "comment": serialize_comment(
+            db,
+            new_comment,
+            author=user,
+            viewer_vote=None,
+        ),
+    }
 
 
 @router.post("/comments/{comment_id}/report")
