@@ -6,7 +6,7 @@ import {
   MessageCircle,
 } from 'lucide-react'
 import FeedCommentThread from './FeedCommentThread'
-import type { Post, ThreadState, ViewerRole } from './types'
+import type { Post, ThreadState, ViewerRole, VoteSelection } from './types'
 import { formatTimeAgo, getAvatarLetter, renderStars } from './utils'
 
 type FeedPostCardProps = {
@@ -16,7 +16,7 @@ type FeedPostCardProps = {
   commentCount: number
   viewerRole: ViewerRole
   onToggleComments: () => void
-  onVote: (upvote: boolean) => void
+  onVote: (vote: VoteSelection) => void
   onDeletePost: () => void
   onReportPost: () => void
   onDraftChange: (value: string) => void
@@ -24,7 +24,7 @@ type FeedPostCardProps = {
   onReplyToggle: (commentId: string) => void
   onCloseReply: () => void
   onSubmitComment: (parentId?: string) => void
-  onCommentVote: (commentId: string, upvote: boolean) => void
+  onCommentVote: (commentId: string, vote: VoteSelection) => void
   onDeleteComment: (commentId: string) => void
   onReportComment: (commentId: string) => void
 }
@@ -200,7 +200,10 @@ function FeedPostCard({
             className={`vote-button ${hasUpvoted ? 'vote-button-active' : ''}`}
             type="button"
             aria-pressed={hasUpvoted}
-            onClick={() => onVote(true)}
+            aria-label={
+              hasUpvoted ? 'Remove upvote from post' : `Upvote post (${post.upvotes} upvotes)`
+            }
+            onClick={() => onVote(hasUpvoted ? null : 'up')}
           >
             <ChevronUp className="feed-action-icon" aria-hidden="true" />
             <span className="feed-action-count">{post.upvotes}</span>
@@ -210,7 +213,12 @@ function FeedPostCard({
             className={`vote-button ${hasDownvoted ? 'vote-button-active' : ''}`}
             type="button"
             aria-pressed={hasDownvoted}
-            onClick={() => onVote(false)}
+            aria-label={
+              hasDownvoted
+                ? 'Remove downvote from post'
+                : `Downvote post (${post.downvotes} downvotes)`
+            }
+            onClick={() => onVote(hasDownvoted ? null : 'down')}
           >
             <ChevronDown className="feed-action-icon" aria-hidden="true" />
             <span className="feed-action-count">{post.downvotes}</span>

@@ -42,6 +42,17 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
   const [isUploadPopupOpen, setIsUploadPopupOpen] = useState(false)
   const [currentUserPfp, setCurrentUserPfp] = useState<string | null>(null)
   const [currentUserRole, setCurrentUserRole] = useState<ViewerRole>('')
+  const authHeaders = useMemo(
+    () => (token ? { Authorization: `Bearer ${token}` } : undefined),
+    [token]
+  )
+  const jsonHeaders = useMemo(
+    () => ({
+      ...(authHeaders ?? {}),
+      'Content-Type': 'application/json',
+    }),
+    [authHeaders]
+  )
 
   function updateThreadState(
     postId: string,
@@ -60,8 +71,43 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
     return threadStates[postId] ?? createInitialThreadState()
   }
 
+  function setPostCommentCount(postId: string, commentCount: number) {
+    setPosts((current) =>
+      current.map((post) =>
+        post.id === postId
+          ? {
+              ...post,
+              comment_count: commentCount,
+            }
+          : post
+      )
+    )
+  }
+
   function getCommentCount(postId: string): number {
     return commentCounts[postId] ?? getThread(postId).comments.length ?? 0
+  }
+
+  function collectCommentSubtreeIds(postId: string, commentId: string) {
+    const idsToRemove = new Set<string>([commentId])
+    const comments = getThread(postId).comments
+    let changed = true
+
+    while (changed) {
+      changed = false
+      for (const comment of comments) {
+        if (
+          comment.parent_id &&
+          idsToRemove.has(comment.parent_id) &&
+          !idsToRemove.has(comment.id)
+        ) {
+          idsToRemove.add(comment.id)
+          changed = true
+        }
+      }
+    }
+
+    return idsToRemove
   }
 
   async function loadPostDetails(postId: string) {
@@ -72,7 +118,9 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
     }))
 
     try {
-      const response = await fetch(`${API_BASE_URL}/posts/${postId}`)
+      const response = await fetch(`${API_BASE_URL}/posts/${postId}`, {
+        headers: authHeaders,
+      })
       const data: PostDetailsResponse = await response.json()
 
       if (!response.ok) {
@@ -97,6 +145,7 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
         ...current,
         [postId]: data.count ?? comments.length,
       }))
+      setPostCommentCount(postId, data.count ?? comments.length)
     } catch (error) {
       console.error(error)
       updateThreadState(postId, (current) => ({
@@ -112,7 +161,9 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
     setMessage('')
 
     try {
-      const response = await fetch(`${API_BASE_URL}/posts/`)
+      const response = await fetch(`${API_BASE_URL}/posts/`, {
+        headers: authHeaders,
+      })
       const data: PostsResponse = await response.json()
 
       if (!response.ok) {
@@ -123,20 +174,11 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
 
       const nextPosts = data.posts ?? []
       setPosts(nextPosts)
-
-      const countsEntries = await Promise.all(
-        nextPosts.map(async (post) => {
-          try {
-            const detailResponse = await fetch(`${API_BASE_URL}/posts/${post.id}`)
-            const detailData: PostDetailsResponse = await detailResponse.json()
-            return [post.id, detailData.count ?? 0] as const
-          } catch {
-            return [post.id, 0] as const
-          }
-        })
+      setCommentCounts(
+        Object.fromEntries(
+          nextPosts.map((post) => [post.id, post.comment_count ?? 0] as const)
+        )
       )
-
-      setCommentCounts(Object.fromEntries(countsEntries))
     } catch (error) {
       console.error(error)
       setMessage('Network error while loading feed')
@@ -179,9 +221,7 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
     async function loadUser() {
       try {
         const response = await fetch(`${API_BASE_URL}/accounts/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: authHeaders,
         })
         const data = await response.json()
         if (response.ok && data?.account_info?.profile_picture) {
@@ -196,7 +236,7 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
     }
 
     void loadUser()
-  }, [token])
+  }, [authHeaders])
 
   useEffect(() => {
     if (isMenuOpen) {
@@ -204,17 +244,13 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
     }
   }, [isMenuOpen, selectedPlace])
 
-  async function handleVote(postId: string, upvote: boolean) {
+  async function handleVote(postId: string, vote: VoteSelection) {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/posts/${postId}/vote?upvote=${upvote}`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      )
+      const response = await fetch(`${API_BASE_URL}/posts/${postId}/vote`, {
+        method: 'POST',
+        headers: jsonHeaders,
+        body: JSON.stringify({ vote }),
+      })
 
       if (!response.ok) {
         setMessage('Could not save vote')
@@ -230,9 +266,7 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
                 ...post,
                 upvotes: data.upvotes ?? post.upvotes,
                 downvotes: data.downvotes ?? post.downvotes,
-                viewer_vote:
-                  data.viewer_vote ??
-                  ((upvote ? 'up' : 'down') as VoteSelection),
+                viewer_vote: data.viewer_vote ?? vote,
               }
             : post
         )
@@ -246,18 +280,17 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
   async function handleCommentVote(
     postId: string,
     commentId: string,
-    upvote: boolean
+    vote: VoteSelection
   ) {
     updateThreadState(postId, (current) => ({ ...current, error: '' }))
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/posts/comments/${commentId}/vote?upvote=${upvote}`,
+        `${API_BASE_URL}/posts/comments/${commentId}/vote`,
         {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: jsonHeaders,
+          body: JSON.stringify({ vote }),
         }
       )
 
@@ -279,9 +312,7 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
                 ...comment,
                 upvotes: data.upvotes ?? comment.upvotes,
                 downvotes: data.downvotes ?? comment.downvotes,
-                viewer_vote:
-                  data.viewer_vote ??
-                  ((upvote ? 'up' : 'down') as VoteSelection),
+                viewer_vote: data.viewer_vote ?? vote,
               }
             : comment
         ),
@@ -301,9 +332,7 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
     try {
       const response = await fetch(`${API_BASE_URL}/posts/${postId}/delete`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: authHeaders,
       })
 
       if (!response.ok) {
@@ -334,9 +363,7 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
     try {
       const response = await fetch(`${API_BASE_URL}/posts/${postId}/report`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: authHeaders,
       })
 
       if (!response.ok) {
@@ -359,9 +386,7 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
         `${API_BASE_URL}/posts/comments/${commentId}/delete`,
         {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: authHeaders,
         }
       )
 
@@ -373,26 +398,13 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
         return
       }
 
-      let removedCount = 0
+      const idsToRemove = collectCommentSubtreeIds(postId, commentId)
+      const removedCount = idsToRemove.size
 
       updateThreadState(postId, (current) => {
-        const idsToRemove = new Set<string>([commentId])
-        let changed = true
-
-        while (changed) {
-          changed = false
-          for (const comment of current.comments) {
-            if (comment.parent_id && idsToRemove.has(comment.parent_id) && !idsToRemove.has(comment.id)) {
-              idsToRemove.add(comment.id)
-              changed = true
-            }
-          }
-        }
-
         const nextComments = current.comments.filter(
           (comment) => !idsToRemove.has(comment.id)
         )
-        removedCount = idsToRemove.size
         const nextReplyDrafts = { ...current.replyDrafts }
         for (const id of idsToRemove) {
           delete nextReplyDrafts[id]
@@ -409,10 +421,12 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
         }
       })
 
+      const nextCommentCount = Math.max(0, getCommentCount(postId) - removedCount)
       setCommentCounts((current) => ({
         ...current,
-        [postId]: Math.max(0, (current[postId] ?? 0) - removedCount),
+        [postId]: nextCommentCount,
       }))
+      setPostCommentCount(postId, nextCommentCount)
     } catch (error) {
       console.error(error)
       updateThreadState(postId, (current) => ({
@@ -430,9 +444,7 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
         `${API_BASE_URL}/posts/comments/${commentId}/report`,
         {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: authHeaders,
         }
       )
 
@@ -488,9 +500,7 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
         `${API_BASE_URL}/posts/${postId}/comment?${params.toString()}`,
         {
           method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: authHeaders,
         }
       )
       const data = await response.json()
@@ -524,10 +534,12 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
         }
       })
 
+      const nextCommentCount = getCommentCount(postId) + 1
       setCommentCounts((current) => ({
         ...current,
-        [postId]: (current[postId] ?? 0) + 1,
+        [postId]: nextCommentCount,
       }))
+      setPostCommentCount(postId, nextCommentCount)
     } catch (error) {
       console.error(error)
       updateThreadState(postId, (current) => ({

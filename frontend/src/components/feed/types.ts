@@ -24,7 +24,8 @@ export type Post = {
   created_at: string
   upvotes: number
   downvotes: number
-  viewer_vote?: VoteSelection
+  viewer_vote: VoteSelection
+  comment_count: number
 }
 
 export type Comment = {
@@ -37,7 +38,7 @@ export type Comment = {
   created_at: string
   upvotes: number
   downvotes: number
-  viewer_vote?: VoteSelection
+  viewer_vote: VoteSelection
 }
 
 export type PostsResponse = {

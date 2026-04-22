@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronRight, ChevronUp, Ellipsis } from "lucide-react";
-import type { Comment, ThreadState, ViewerRole } from "./types";
+import type { Comment, ThreadState, ViewerRole, VoteSelection } from "./types";
 import { formatTimeAgo, getAvatarLetter } from "./utils";
 
 type FeedCommentThreadProps = {
@@ -11,7 +11,7 @@ type FeedCommentThreadProps = {
   onReplyToggle: (commentId: string) => void;
   onCloseReply: () => void;
   onSubmitComment: (parentId?: string) => void;
-  onCommentVote: (commentId: string, upvote: boolean) => void;
+  onCommentVote: (commentId: string, vote: VoteSelection) => void;
   onDeleteComment: (commentId: string) => void;
   onReportComment: (commentId: string) => void;
 };
@@ -194,7 +194,7 @@ function FeedCommentTree({
   onReplyToggle: (commentId: string) => void;
   onCloseReply: () => void;
   onSubmitComment: (parentId?: string) => void;
-  onCommentVote: (commentId: string, upvote: boolean) => void;
+  onCommentVote: (commentId: string, vote: VoteSelection) => void;
   onDeleteComment: (commentId: string) => void;
   onReportComment: (commentId: string) => void;
 }) {
@@ -310,8 +310,14 @@ function FeedCommentTree({
                       }`}
                       type="button"
                       aria-pressed={hasUpvoted}
-                      aria-label={`Upvote comment (${comment.upvotes} upvotes)`}
-                      onClick={() => onCommentVote(comment.id, true)}
+                      aria-label={
+                        hasUpvoted
+                          ? "Remove upvote from comment"
+                          : `Upvote comment (${comment.upvotes} upvotes)`
+                      }
+                      onClick={() =>
+                        onCommentVote(comment.id, hasUpvoted ? null : "up")
+                      }
                     >
                       <ChevronUp
                         className="feed-action-icon"
@@ -329,8 +335,14 @@ function FeedCommentTree({
                       }`}
                       type="button"
                       aria-pressed={hasDownvoted}
-                      aria-label={`Downvote comment (${comment.downvotes} downvotes)`}
-                      onClick={() => onCommentVote(comment.id, false)}
+                      aria-label={
+                        hasDownvoted
+                          ? "Remove downvote from comment"
+                          : `Downvote comment (${comment.downvotes} downvotes)`
+                      }
+                      onClick={() =>
+                        onCommentVote(comment.id, hasDownvoted ? null : "down")
+                      }
                     >
                       <ChevronDown
                         className="feed-action-icon"
