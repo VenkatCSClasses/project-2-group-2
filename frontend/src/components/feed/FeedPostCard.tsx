@@ -1,19 +1,13 @@
-import { useState } from 'react'
 import {
   ChevronDown,
   ChevronUp,
-  Ellipsis,
   MessageCircle,
 } from 'lucide-react'
+import FeedActionMenu from './FeedActionMenu'
 import FeedCommentThread from './FeedCommentThread'
 import type { Post, ThreadState, ViewerRole, VoteSelection } from './types'
-import {
-  formatTimeAgo,
-  getAvatarLetter,
-  renderStars,
-  viewerCanModerate,
-} from './utils'
-import { useDismissibleLayer } from './useDismissibleLayer'
+import { viewerCanDeleteContent } from './actionPolicy'
+import { formatTimeAgo, getAvatarLetter, renderStars } from './utils'
 
 type FeedPostCardProps = {
   post: Post
@@ -21,6 +15,7 @@ type FeedPostCardProps = {
   thread: ThreadState
   commentCount: number
   viewerRole: ViewerRole
+  viewerUsername: string
   onToggleComments: () => void
   onVote: (vote: VoteSelection) => void
   onDeletePost: () => void
@@ -41,6 +36,7 @@ function FeedPostCard({
   thread,
   commentCount,
   viewerRole,
+  viewerUsername,
   onToggleComments,
   onVote,
   onDeletePost,
@@ -63,10 +59,10 @@ function FeedPostCard({
       ? post.image_url
       : `${apiBaseUrl}${post.image_url}`
     : null
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const isModerator = viewerCanModerate(viewerRole)
-  const menuRef = useDismissibleLayer<HTMLDivElement>(isMenuOpen, () =>
-    setIsMenuOpen(false)
+  const canDeletePost = viewerCanDeleteContent(
+    viewerRole,
+    viewerUsername,
+    post.author_username
   )
 
   return (
@@ -105,40 +101,19 @@ function FeedPostCard({
             </div>
           </div>
 
-          <div className="feed-overflow-menu" ref={menuRef}>
-            <button
-              className="overflow-trigger"
-              type="button"
-              aria-label="Post actions"
-              aria-expanded={isMenuOpen}
-              aria-haspopup="menu"
-              onClick={() => setIsMenuOpen((current) => !current)}
-            >
-              <Ellipsis className="overflow-icon" aria-hidden="true" />
-            </button>
+          <FeedActionMenu
+            menuLabel="Post actions"
+            actionLabel={canDeletePost ? 'Remove post' : 'Report post'}
+            danger={canDeletePost}
+            onAction={() => {
+              if (canDeletePost) {
+                onDeletePost()
+                return
+              }
 
-            {isMenuOpen && (
-              <div className="overflow-menu-panel" role="menu">
-                <button
-                  className={`overflow-menu-item ${
-                    isModerator ? 'overflow-menu-item-danger' : ''
-                  }`}
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setIsMenuOpen(false)
-                    if (isModerator) {
-                      onDeletePost()
-                      return
-                    }
-                    onReportPost()
-                  }}
-                >
-                  {isModerator ? 'Remove post' : 'Report post'}
-                </button>
-              </div>
-            )}
-          </div>
+              onReportPost()
+            }}
+          />
         </div>
       </header>
 
@@ -214,6 +189,7 @@ function FeedPostCard({
           <FeedCommentThread
             thread={thread}
             viewerRole={viewerRole}
+            viewerUsername={viewerUsername}
             onDraftChange={onDraftChange}
             onReplyDraftChange={onReplyDraftChange}
             onReplyToggle={onReplyToggle}

@@ -1,15 +1,8 @@
 import type { Comment } from './types'
 
-export type CommentThreadMeta = {
-  ancestorIds: string[]
-  descendantCount: number
-  maxSubtreeDepth: number
-  replyCount: number
-}
-
 export type CommentThreadIndex = {
   childrenByParent: Record<string, Comment[]>
-  metaById: Record<string, CommentThreadMeta>
+  commentsById: Record<string, Comment>
 }
 
 export type CollapsedComments = Record<string, boolean>
@@ -34,8 +27,10 @@ export function getReplyRegionId(commentId: string) {
 
 export function buildCommentThreadIndex(comments: Comment[]): CommentThreadIndex {
   const childrenByParent: Record<string, Comment[]> = {}
+  const commentsById: Record<string, Comment> = {}
 
   comments.forEach((comment) => {
+    commentsById[comment.id] = comment
     const parentKey = getCommentParentKey(comment.parent_id)
     childrenByParent[parentKey] ??= []
     childrenByParent[parentKey].push(comment)
@@ -49,44 +44,7 @@ export function buildCommentThreadIndex(comments: Comment[]): CommentThreadIndex
     )
   })
 
-  const metaById: Record<string, CommentThreadMeta> = {}
-
-  function visitComment(comment: Comment, ancestorIds: string[]): CommentThreadMeta {
-    const children = childrenByParent[comment.id] ?? []
-    let descendantCount = 0
-    let maxSubtreeDepth = 0
-
-    children.forEach((child) => {
-      const childMeta = visitComment(child, [...ancestorIds, comment.id])
-      descendantCount += 1 + childMeta.descendantCount
-      maxSubtreeDepth = Math.max(maxSubtreeDepth, childMeta.maxSubtreeDepth + 1)
-    })
-
-    const meta = {
-      ancestorIds,
-      descendantCount,
-      maxSubtreeDepth,
-      replyCount: children.length,
-    }
-
-    metaById[comment.id] = meta
-    return meta
-  }
-
-  ;(childrenByParent[ROOT_COMMENT_KEY] ?? []).forEach((comment) => {
-    visitComment(comment, [])
-  })
-
-  comments.forEach((comment) => {
-    metaById[comment.id] ??= {
-      ancestorIds: [],
-      descendantCount: 0,
-      maxSubtreeDepth: 0,
-      replyCount: 0,
-    }
-  })
-
-  return { childrenByParent, metaById }
+  return { childrenByParent, commentsById }
 }
 
 export function collectCommentSubtreeIds(
@@ -105,71 +63,6 @@ export function collectCommentSubtreeIds(
 
   visit(commentId)
   return ids
-}
-
-export function shouldAutoCollapseThread(
-  depth: number,
-  replyCount: number,
-  descendantCount: number
-) {
-  if (replyCount === 0) {
-    return false
-  }
-
-  if (depth >= 3) {
-    return true
-  }
-
-  if (depth === 2 && descendantCount >= 4) {
-    return true
-  }
-
-  if (depth === 1 && descendantCount >= 6) {
-    return true
-  }
-
-  return depth === 0 && descendantCount >= 10
-}
-
-export function shouldRenderThreadToggle(
-  depth: number,
-  replyCount: number,
-  descendantCount: number,
-  maxSubtreeDepth: number,
-  isCollapsed: boolean
-) {
-  if (replyCount === 0) {
-    return false
-  }
-
-  if (isCollapsed) {
-    return true
-  }
-
-  const hasBranchingReplies = replyCount >= 2
-  const hasLayeredThread = maxSubtreeDepth >= 2
-
-  if (depth >= 2) {
-    return hasBranchingReplies || descendantCount >= 3 || hasLayeredThread
-  }
-
-  if (depth === 1) {
-    return (
-      replyCount >= 3 ||
-      descendantCount >= 4 ||
-      (hasBranchingReplies && descendantCount >= 3) ||
-      (hasLayeredThread && descendantCount >= 4)
-    )
-  }
-
-  if (replyCount >= 3 || descendantCount >= 5) {
-    return true
-  }
-
-  return (
-    (hasBranchingReplies && descendantCount >= 4) ||
-    (hasLayeredThread && descendantCount >= 5)
-  )
 }
 
 function pruneCollapsedComments(
@@ -204,22 +97,16 @@ export function getVisibleCollapsedComments(
     return next
   }
 
-  const targetMeta = threadIndex.metaById[replyTargetId]
-  if (!targetMeta) {
-    return next
+  let currentComment: Comment | undefined = threadIndex.commentsById[replyTargetId]
+
+  while (currentComment) {
+    next[currentComment.id] = false
+    currentComment = currentComment.parent_id
+      ? threadIndex.commentsById[currentComment.parent_id]
+      : undefined
   }
 
-  let changed = false
-  for (const commentId of [...targetMeta.ancestorIds, replyTargetId]) {
-    if (next[commentId] === false) {
-      continue
-    }
-
-    next[commentId] = false
-    changed = true
-  }
-
-  return changed ? next : next
+  return next
 }
 
 export function toggleCollapsedComment(

@@ -12,6 +12,7 @@ import type { ThreadState, ViewerRole, VoteSelection } from './types'
 type FeedCommentThreadProps = {
   thread: ThreadState
   viewerRole: ViewerRole
+  viewerUsername: string
   onDraftChange: (value: string) => void
   onReplyDraftChange: (commentId: string, value: string) => void
   onReplyToggle: (commentId: string) => void
@@ -25,6 +26,7 @@ type FeedCommentThreadProps = {
 function FeedCommentThread({
   thread,
   viewerRole,
+  viewerUsername,
   onDraftChange,
   onReplyDraftChange,
   onReplyToggle,
@@ -101,6 +103,7 @@ function FeedCommentThread({
           depth={0}
           thread={thread}
           viewerRole={viewerRole}
+          viewerUsername={viewerUsername}
           collapsedById={visibleCollapsedById}
           onToggleCollapse={handleToggleCollapse}
           onReplyDraftChange={onReplyDraftChange}

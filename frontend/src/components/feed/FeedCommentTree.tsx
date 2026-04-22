@@ -1,19 +1,17 @@
-import { useState } from 'react'
-import { ChevronDown, ChevronRight, ChevronUp, Ellipsis } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronUp } from 'lucide-react'
+import FeedActionMenu from './FeedActionMenu'
 import FeedCommentComposer from './FeedCommentComposer'
+import { viewerCanDeleteContent } from './actionPolicy'
 import {
   formatReplyLabel,
   getCommentParentKey,
   getReplyRegionId,
   getThreadToggleLabel,
-  shouldAutoCollapseThread,
-  shouldRenderThreadToggle,
   type CollapsedComments,
   type CommentThreadIndex,
 } from './commentThread'
 import type { ThreadState, ViewerRole, VoteSelection } from './types'
-import { formatTimeAgo, getAvatarLetter, viewerCanModerate } from './utils'
-import { useDismissibleLayer } from './useDismissibleLayer'
+import { formatTimeAgo, getAvatarLetter } from './utils'
 
 type FeedCommentTreeProps = {
   threadIndex: CommentThreadIndex
@@ -21,6 +19,7 @@ type FeedCommentTreeProps = {
   depth: number
   thread: ThreadState
   viewerRole: ViewerRole
+  viewerUsername: string
   collapsedById: CollapsedComments
   onToggleCollapse: (commentId: string, currentCollapsed: boolean) => void
   onReplyDraftChange: (commentId: string, value: string) => void
@@ -38,6 +37,7 @@ function FeedCommentTree({
   depth,
   thread,
   viewerRole,
+  viewerUsername,
   collapsedById,
   onToggleCollapse,
   onReplyDraftChange,
@@ -50,12 +50,6 @@ function FeedCommentTree({
 }: FeedCommentTreeProps) {
   const children =
     threadIndex.childrenByParent[getCommentParentKey(parentId)] ?? []
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
-  const menuRootRef = useDismissibleLayer<HTMLDivElement>(
-    openMenuId !== null,
-    () => setOpenMenuId(null)
-  )
-  const isModerator = viewerCanModerate(viewerRole)
 
   if (children.length === 0) {
     return null
@@ -63,7 +57,6 @@ function FeedCommentTree({
 
   return (
     <div
-      ref={menuRootRef}
       className={`feed-comment-tree ${
         depth === 0 ? 'feed-comment-tree-root' : 'feed-comment-tree-nested'
       }`}
@@ -72,24 +65,20 @@ function FeedCommentTree({
         const username = comment.author_username ?? 'user'
         const isReplying = thread.replyTargetId === comment.id
         const replyDraft = thread.replyDrafts[comment.id] ?? ''
-        const commentMeta = threadIndex.metaById[comment.id]
-        const replyCount = commentMeta?.replyCount ?? 0
-        const descendantCount = commentMeta?.descendantCount ?? 0
-        const maxSubtreeDepth = commentMeta?.maxSubtreeDepth ?? 0
+        const replies = threadIndex.childrenByParent[comment.id] ?? []
+        const replyCount = replies.length
         const hasUpvoted = comment.viewer_vote === 'up'
         const hasDownvoted = comment.viewer_vote === 'down'
-        const isCollapsed =
-          collapsedById[comment.id] ??
-          shouldAutoCollapseThread(depth, replyCount, descendantCount)
-        const shouldShowThreadToggle = shouldRenderThreadToggle(
-          depth,
-          replyCount,
-          descendantCount,
-          maxSubtreeDepth,
-          isCollapsed
-        )
         const hasReplies = replyCount > 0
+        const defaultCollapsed = depth >= 2
+        const isCollapsed =
+          hasReplies && (collapsedById[comment.id] ?? defaultCollapsed)
         const replyRegionId = getReplyRegionId(comment.id)
+        const canDeleteComment = viewerCanDeleteContent(
+          viewerRole,
+          viewerUsername,
+          comment.author_username
+        )
 
         return (
           <div
@@ -180,45 +169,23 @@ function FeedCommentTree({
                     Reply
                   </button>
 
-                  <div className="feed-overflow-menu feed-comment-overflow-menu">
-                    <button
-                      className="overflow-trigger overflow-trigger-comment"
-                      type="button"
-                      aria-label="Comment actions"
-                      aria-expanded={openMenuId === comment.id}
-                      aria-haspopup="menu"
-                      onClick={() =>
-                        setOpenMenuId((current) =>
-                          current === comment.id ? null : comment.id
-                        )
+                  <FeedActionMenu
+                    className="feed-overflow-menu feed-comment-overflow-menu"
+                    triggerClassName="overflow-trigger overflow-trigger-comment"
+                    menuLabel="Comment actions"
+                    actionLabel={
+                      canDeleteComment ? 'Remove comment' : 'Report comment'
+                    }
+                    danger={canDeleteComment}
+                    onAction={() => {
+                      if (canDeleteComment) {
+                        onDeleteComment(comment.id)
+                        return
                       }
-                    >
-                      <Ellipsis className="overflow-icon" aria-hidden="true" />
-                    </button>
 
-                    {openMenuId === comment.id && (
-                      <div className="overflow-menu-panel" role="menu">
-                        <button
-                          className={`overflow-menu-item ${
-                            isModerator ? 'overflow-menu-item-danger' : ''
-                          }`}
-                          type="button"
-                          role="menuitem"
-                          onClick={() => {
-                            setOpenMenuId(null)
-                            if (isModerator) {
-                              onDeleteComment(comment.id)
-                              return
-                            }
-
-                            onReportComment(comment.id)
-                          }}
-                        >
-                          {isModerator ? 'Remove comment' : 'Report comment'}
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                      onReportComment(comment.id)
+                    }}
+                  />
                 </div>
 
                 {isReplying && (
@@ -236,7 +203,7 @@ function FeedCommentTree({
                   />
                 )}
 
-                {hasReplies && shouldShowThreadToggle && (
+                {hasReplies && (
                   <div className="feed-comment-thread-toggle-row">
                     <button
                       className={`comment-thread-toggle ${
@@ -245,7 +212,7 @@ function FeedCommentTree({
                       type="button"
                       aria-label={`${
                         isCollapsed ? 'Show' : 'Hide'
-                      } ${formatReplyLabel(descendantCount)}`}
+                      } ${formatReplyLabel(replyCount)}`}
                       aria-expanded={!isCollapsed}
                       aria-controls={replyRegionId}
                       onClick={() => onToggleCollapse(comment.id, isCollapsed)}
@@ -265,7 +232,7 @@ function FeedCommentTree({
                         {getThreadToggleLabel(isCollapsed)}
                       </span>
                       <span className="comment-thread-toggle-meta">
-                        {formatReplyLabel(descendantCount)}
+                        {formatReplyLabel(replyCount)}
                       </span>
                     </button>
                   </div>
@@ -279,6 +246,7 @@ function FeedCommentTree({
                       depth={depth + 1}
                       thread={thread}
                       viewerRole={viewerRole}
+                      viewerUsername={viewerUsername}
                       collapsedById={collapsedById}
                       onToggleCollapse={onToggleCollapse}
                       onReplyDraftChange={onReplyDraftChange}

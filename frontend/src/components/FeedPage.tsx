@@ -1,25 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import FeedPostCard from './feed/FeedPostCard'
-import {
-  applyThreadCommentVote,
-  clearThreadError,
-  closeThreadReply,
-  failThreadLoading,
-  failThreadSubmit,
-  finishThreadLoading,
-  finishThreadSubmit,
-  getThreadState,
-  removeCommentsFromThread,
-  removeThreadState,
-  setThreadDraft,
-  setThreadError,
-  setThreadReplyDraft,
-  startThreadLoading,
-  startThreadSubmit,
-  toggleThreadOpen,
-  toggleThreadReplyTarget,
-  updateThreadStateMap,
-} from './feed/threadState'
 import { collectCommentSubtreeIds } from './feed/commentThread'
 import type {
   FeedPageProps,
@@ -33,6 +13,7 @@ import type {
   VoteSelection,
   ViewerRole,
 } from './feed/types'
+import { createInitialThreadState } from './feed/utils'
 import './FeedPage.css'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
@@ -44,7 +25,6 @@ const PLACE_NAMES: Record<PlaceKey, string> = {
 
 function FeedPage({ token, onOpenUpload }: FeedPageProps) {
   const [posts, setPosts] = useState<Post[]>([])
-  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({})
   const [threadStates, setThreadStates] = useState<Record<string, ThreadState>>(
     {}
   )
@@ -59,6 +39,7 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
   const [menuError, setMenuError] = useState('')
   const [isUploadPopupOpen, setIsUploadPopupOpen] = useState(false)
   const [currentUserPfp, setCurrentUserPfp] = useState<string | null>(null)
+  const [currentUsername, setCurrentUsername] = useState('')
   const [currentUserRole, setCurrentUserRole] = useState<ViewerRole>('')
   const authHeaders = useMemo(
     () => (token ? { Authorization: `Bearer ${token}` } : undefined),
@@ -76,18 +57,20 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
     postId: string,
     updater: (current: ThreadState) => ThreadState
   ) {
-    setThreadStates((current) => updateThreadStateMap(current, postId, updater))
+    setThreadStates((current) => ({
+      ...current,
+      [postId]: updater(current[postId] ?? createInitialThreadState()),
+    }))
   }
 
-  function getThread(postId: string): ThreadState {
-    return getThreadState(threadStates, postId)
+  function getThread(
+    postId: string,
+    source: Record<string, ThreadState> = threadStates
+  ): ThreadState {
+    return source[postId] ?? createInitialThreadState()
   }
 
   function updatePostCommentCount(postId: string, commentCount: number) {
-    setCommentCounts((current) => ({
-      ...current,
-      [postId]: commentCount,
-    }))
     setPosts((current) =>
       current.map((post) =>
         post.id === postId
@@ -100,12 +83,16 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
     )
   }
 
-  function getCommentCount(postId: string): number {
-    return commentCounts[postId] ?? getThread(postId).comments.length
+  function getPostCommentCount(postId: string): number {
+    return posts.find((post) => post.id === postId)?.comment_count ?? 0
   }
 
   async function loadPostDetails(postId: string) {
-    updateThreadState(postId, startThreadLoading)
+    updateThreadState(postId, (current) => ({
+      ...current,
+      loading: true,
+      error: '',
+    }))
 
     try {
       const response = await fetch(`${API_BASE_URL}/posts/${postId}`, {
@@ -115,7 +102,11 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
 
       if (!response.ok) {
         updateThreadState(postId, (current) =>
-          failThreadLoading(current, 'Could not load comments')
+          ({
+            ...current,
+            loading: false,
+            error: 'Could not load comments',
+          })
         )
         return
       }
@@ -123,13 +114,23 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
       const comments = data.comments ?? []
 
       updateThreadState(postId, (current) =>
-        finishThreadLoading(current, comments)
+        ({
+          ...current,
+          loading: false,
+          loaded: true,
+          comments,
+          error: '',
+        })
       )
       updatePostCommentCount(postId, data.count ?? comments.length)
     } catch (error) {
       console.error(error)
       updateThreadState(postId, (current) =>
-        failThreadLoading(current, 'Network error while loading comments')
+        ({
+          ...current,
+          loading: false,
+          error: 'Network error while loading comments',
+        })
       )
     }
   }
@@ -152,11 +153,6 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
 
       const nextPosts = data.posts ?? []
       setPosts(nextPosts)
-      setCommentCounts(
-        Object.fromEntries(
-          nextPosts.map((post) => [post.id, post.comment_count ?? 0] as const)
-        )
-      )
     } catch (error) {
       console.error(error)
       setMessage('Network error while loading feed')
@@ -202,6 +198,9 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
           headers: authHeaders,
         })
         const data = await response.json()
+        if (response.ok && data?.username) {
+          setCurrentUsername(data.username)
+        }
         if (response.ok && data?.account_info?.profile_picture) {
           setCurrentUserPfp(data.account_info.profile_picture)
         }
@@ -260,7 +259,10 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
     commentId: string,
     vote: VoteSelection
   ) {
-    updateThreadState(postId, clearThreadError)
+    updateThreadState(postId, (current) => ({
+      ...current,
+      error: '',
+    }))
 
     try {
       const response = await fetch(
@@ -274,7 +276,10 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
 
       if (!response.ok) {
         updateThreadState(postId, (current) =>
-          setThreadError(current, 'Could not save comment vote')
+          ({
+            ...current,
+            error: 'Could not save comment vote',
+          })
         )
         return
       }
@@ -282,12 +287,27 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
       const data = await response.json()
 
       updateThreadState(postId, (current) =>
-        applyThreadCommentVote(current, commentId, vote, data)
+        ({
+          ...current,
+          comments: current.comments.map((comment) =>
+            comment.id === commentId
+              ? {
+                  ...comment,
+                  upvotes: data.upvotes ?? comment.upvotes,
+                  downvotes: data.downvotes ?? comment.downvotes,
+                  viewer_vote: data.viewer_vote ?? vote,
+                }
+              : comment
+          ),
+        })
       )
     } catch (error) {
       console.error(error)
       updateThreadState(postId, (current) =>
-        setThreadError(current, 'Network error while voting on comment')
+        ({
+          ...current,
+          error: 'Network error while voting on comment',
+        })
       )
     }
   }
@@ -307,12 +327,15 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
       }
 
       setPosts((current) => current.filter((post) => post.id !== postId))
-      setCommentCounts((current) => {
+      setThreadStates((current) => {
+        if (!(postId in current)) {
+          return current
+        }
+
         const next = { ...current }
         delete next[postId]
         return next
       })
-      setThreadStates((current) => removeThreadState(current, postId))
     } catch (error) {
       console.error(error)
       setMessage('Network error while removing post')
@@ -341,7 +364,10 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
   }
 
   async function handleDeleteComment(postId: string, commentId: string) {
-    updateThreadState(postId, clearThreadError)
+    updateThreadState(postId, (current) => ({
+      ...current,
+      error: '',
+    }))
 
     try {
       const response = await fetch(
@@ -354,30 +380,59 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
 
       if (!response.ok) {
         updateThreadState(postId, (current) =>
-          setThreadError(current, 'Could not remove comment')
+          ({
+            ...current,
+            error: 'Could not remove comment',
+          })
         )
         return
       }
 
-      const idsToRemove = collectCommentSubtreeIds(getThread(postId).comments, commentId)
+      const idsToRemove = collectCommentSubtreeIds(
+        getThread(postId).comments,
+        commentId
+      )
       const removedCount = idsToRemove.size
 
       updateThreadState(postId, (current) =>
-        removeCommentsFromThread(current, idsToRemove)
+        ({
+          ...current,
+          comments: current.comments.filter(
+            (comment) => !idsToRemove.has(comment.id)
+          ),
+          replyDrafts: Object.fromEntries(
+            Object.entries(current.replyDrafts).filter(
+              ([id]) => !idsToRemove.has(id)
+            )
+          ),
+          replyTargetId:
+            current.replyTargetId && idsToRemove.has(current.replyTargetId)
+              ? null
+              : current.replyTargetId,
+        })
       )
 
-      const nextCommentCount = Math.max(0, getCommentCount(postId) - removedCount)
+      const nextCommentCount = Math.max(
+        0,
+        getPostCommentCount(postId) - removedCount
+      )
       updatePostCommentCount(postId, nextCommentCount)
     } catch (error) {
       console.error(error)
       updateThreadState(postId, (current) =>
-        setThreadError(current, 'Network error while removing comment')
+        ({
+          ...current,
+          error: 'Network error while removing comment',
+        })
       )
     }
   }
 
   async function handleReportComment(postId: string, commentId: string) {
-    updateThreadState(postId, clearThreadError)
+    updateThreadState(postId, (current) => ({
+      ...current,
+      error: '',
+    }))
 
     try {
       const response = await fetch(
@@ -390,18 +445,27 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
 
       if (!response.ok) {
         updateThreadState(postId, (current) =>
-          setThreadError(current, 'Could not report comment')
+          ({
+            ...current,
+            error: 'Could not report comment',
+          })
         )
         return
       }
 
       updateThreadState(postId, (current) =>
-        setThreadError(current, 'Comment reported')
+        ({
+          ...current,
+          error: 'Comment reported',
+        })
       )
     } catch (error) {
       console.error(error)
       updateThreadState(postId, (current) =>
-        setThreadError(current, 'Network error while reporting comment')
+        ({
+          ...current,
+          error: 'Network error while reporting comment',
+        })
       )
     }
   }
@@ -414,12 +478,20 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
 
     if (!draft) {
       updateThreadState(postId, (current) =>
-        setThreadError(current, 'Comment cannot be empty')
+        ({
+          ...current,
+          error: 'Comment cannot be empty',
+        })
       )
       return
     }
 
-    updateThreadState(postId, (current) => startThreadSubmit(current, parentId))
+    updateThreadState(postId, (current) => ({
+      ...current,
+      error: '',
+      submitting: parentId ? current.submitting : true,
+      submittingReplyId: parentId ?? current.submittingReplyId,
+    }))
 
     const params = new URLSearchParams({ comment: draft })
     if (parentId) {
@@ -438,21 +510,47 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
 
       if (!response.ok) {
         updateThreadState(postId, (current) =>
-          failThreadSubmit(current, 'Could not post comment')
+          ({
+            ...current,
+            submitting: false,
+            submittingReplyId: null,
+            error: 'Could not post comment',
+          })
         )
         return
       }
 
-      updateThreadState(postId, (current) =>
-        finishThreadSubmit(current, data.comment, parentId)
-      )
+      updateThreadState(postId, (current) => {
+        const nextReplyDrafts = { ...current.replyDrafts }
 
-      const nextCommentCount = getCommentCount(postId) + 1
+        if (parentId) {
+          delete nextReplyDrafts[parentId]
+        }
+
+        return {
+          ...current,
+          loaded: true,
+          submitting: false,
+          submittingReplyId: null,
+          comments: [...current.comments, data.comment],
+          draft: parentId ? current.draft : '',
+          replyDrafts: nextReplyDrafts,
+          replyTargetId: parentId ? null : current.replyTargetId,
+          error: '',
+        }
+      })
+
+      const nextCommentCount = getPostCommentCount(postId) + 1
       updatePostCommentCount(postId, nextCommentCount)
     } catch (error) {
       console.error(error)
       updateThreadState(postId, (current) =>
-        failThreadSubmit(current, 'Network error while posting comment')
+        ({
+          ...current,
+          submitting: false,
+          submittingReplyId: null,
+          error: 'Network error while posting comment',
+        })
       )
     }
   }
@@ -461,9 +559,14 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
     const thread = getThread(postId)
     const shouldOpen = !thread.isOpen
 
-    updateThreadState(postId, (current) => toggleThreadOpen(current, shouldOpen))
+    updateThreadState(postId, (current) => ({
+      ...current,
+      isOpen: shouldOpen,
+      error: shouldOpen ? current.error : '',
+      replyTargetId: shouldOpen ? current.replyTargetId : null,
+    }))
 
-    if (shouldOpen && !thread.loaded && !thread.loading) {
+    if (shouldOpen && !thread.loading) {
       await loadPostDetails(postId)
     }
   }
@@ -565,29 +668,47 @@ function FeedPage({ token, onOpenUpload }: FeedPageProps) {
                 post={post}
                 apiBaseUrl={API_BASE_URL}
                 thread={thread}
-                commentCount={getCommentCount(post.id)}
+                commentCount={post.comment_count ?? 0}
                 viewerRole={currentUserRole}
+                viewerUsername={currentUsername}
                 onToggleComments={() => void toggleComments(post.id)}
                 onVote={(upvote) => void handleVote(post.id, upvote)}
                 onDeletePost={() => void handleDeletePost(post.id)}
                 onReportPost={() => void handleReportPost(post.id)}
                 onDraftChange={(value) =>
                   updateThreadState(post.id, (current) =>
-                    setThreadDraft(current, value)
+                    ({
+                      ...current,
+                      draft: value,
+                    })
                   )
                 }
                 onReplyDraftChange={(commentId, value) =>
                   updateThreadState(post.id, (current) =>
-                    setThreadReplyDraft(current, commentId, value)
+                    ({
+                      ...current,
+                      replyDrafts: {
+                        ...current.replyDrafts,
+                        [commentId]: value,
+                      },
+                    })
                   )
                 }
                 onReplyToggle={(commentId) =>
                   updateThreadState(post.id, (current) =>
-                    toggleThreadReplyTarget(current, commentId)
+                    ({
+                      ...current,
+                      replyTargetId:
+                        current.replyTargetId === commentId ? null : commentId,
+                      error: '',
+                    })
                   )
                 }
                 onCloseReply={() =>
-                  updateThreadState(post.id, closeThreadReply)
+                  updateThreadState(post.id, (current) => ({
+                    ...current,
+                    replyTargetId: null,
+                  }))
                 }
                 onSubmitComment={(parentId) =>
                   void submitComment(post.id, parentId)
