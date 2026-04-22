@@ -364,30 +364,32 @@ function RatingUploadPage({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setSubmitMessage('')
-
+  
     if (!token) {
       setSubmitMessage('You must be logged in')
       return
     }
-
+  
     const validationErrors = validateForm(formData, selectedPlaceId)
     setErrors(validationErrors)
-
+  
     if (Object.keys(validationErrors).length > 0) {
       return
     }
-
+  
     setIsSubmitting(true)
-
+  
     try {
       const requestBody = new FormData()
-      requestBody.append('rating', formData.rating)
+      const backendRating = Math.round(Number(formData.rating) * 2)
+  
+      requestBody.append('rating', backendRating.toString())
       requestBody.append('description', formData.description)
-
+  
       if (formData.image) {
         requestBody.append('image', formData.image)
       }
-
+  
       const response = await fetch(
         `${API_BASE_URL}/items/${formData.itemId}/review`,
         {
@@ -398,21 +400,22 @@ function RatingUploadPage({
           body: requestBody,
         }
       )
+  
       const data = await parseJsonResponse<{ detail?: string; message?: string }>(
         response
       )
-
+  
       if (!response.ok) {
         setSubmitMessage(
           data?.detail || data?.message || 'Failed to submit review'
         )
         return
       }
-
-      setSubmitMessage('Review submitted successfully')
+  
+      setSubmitMessage('')
       setFormData({
         ...initialFormState,
-        diningHall: initialDiningHall,
+        diningHall: '',
         itemId: '',
         itemName: '',
       })
@@ -423,6 +426,8 @@ function RatingUploadPage({
       setSelectedPlaceName('')
       setShowItemPicker(false)
       setHoverRating(null)
+  
+      onBack()
     } catch (error) {
       console.error('review submit fetch error:', error)
       setSubmitMessage('Network error while submitting review')
