@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import FeedPostCard from './feed/FeedPostCard'
+import ProfileDropdown from './ProfileDropdown'
 import { collectCommentSubtreeIds } from './feed/commentThread'
 import type {
   FeedPageProps,
@@ -612,26 +613,7 @@ function FeedPage({
             {filterMode === 'latest' ? 'Latest' : 'Top'}
           </button>
 
-          <button
-            className="profile-button"
-            type="button"
-            aria-label="Profile"
-            onClick={onOpenProfile}
-          >
-            {currentUserPfp ? (
-              <img
-                src={
-                  currentUserPfp.startsWith('http')
-                    ? currentUserPfp
-                    : `${API_BASE_URL}${currentUserPfp}`
-                }
-                alt="Profile"
-                className="profile-circle-img"
-              />
-            ) : (
-              <span className="profile-circle">👤</span>
-            )}
-          </button>
+          <ProfileDropdown currentUserPfp={currentUserPfp} onOpenProfile={onOpenProfile} />
         </header>
 
         <main className="feed-list">

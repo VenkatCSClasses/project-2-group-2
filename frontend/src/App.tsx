@@ -14,7 +14,7 @@ type UploadSelection = {
 }
 
 function App() {
-  const [token, setToken] = useState<string | null>(null)
+  const [token, setToken] = useState<string | null>(localStorage.getItem('accessToken'))
   const [page, setPage] = useState<'feed' | 'upload' | 'profile' | 'diningReviews'>('feed')
   const [showPfpSetup, setShowPfpSetup] = useState(false)
   const [uploadSelection, setUploadSelection] = useState<UploadSelection>({
