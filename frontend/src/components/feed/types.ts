@@ -32,6 +32,15 @@ export type Post = {
 }
 
 
+export type Report = {
+  id: string
+  comment_id: string | null
+  created_at: string
+  reporter_id: string
+  review_id: string | null
+  reason: string
+}
+
 export type ReportedPost = {
   id: string
   author_id: string
@@ -48,6 +57,7 @@ export type ReportedPost = {
   comment_count: number
   latest_reported_at: string
   report_count: number
+  reports: Report[]
 }
 
 export type Comment = {

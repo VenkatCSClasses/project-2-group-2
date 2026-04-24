@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { ArrowLeft, Trash2, Ban, RefreshCw } from 'lucide-react';
 import FeedPostCard from './feed/FeedPostCard';
-import type { Post, ThreadState, VoteSelection, ViewerRole, ReportedPost } from './feed/types';
+import type { ThreadState, VoteSelection, ViewerRole, ReportedPost } from './feed/types';
 import { createInitialThreadState } from './feed/utils';
 import './ReportedPostsPage.css';
 
@@ -34,7 +34,7 @@ export default function ReportedPostsPage({ token, onBack }: ReportedPostsPagePr
         setMessage('Failed to load reported posts');
         return;
       }
-      setPosts(data.reported_posts || []);
+      setPosts(Object.values(data.reported_posts || {}));
     } catch (err) {
       console.error(err);
       setMessage('Network error loading reported posts');
@@ -85,7 +85,7 @@ export default function ReportedPostsPage({ token, onBack }: ReportedPostsPagePr
     }
   };
 
-  const handleClearReports = async (postId: string) => {
+  const handleClearReports = async (_postId: string) => {
   }
 
   const handleVote = (_postId: string, _vote: VoteSelection) => {};
@@ -165,8 +165,30 @@ export default function ReportedPostsPage({ token, onBack }: ReportedPostsPagePr
                     <RefreshCw className="mod-icon" />
                     Clear Reports
                   </button>
-                <p className="report-count">{post.report_count || 0} report(s)</p>
+                  <p className="report-count">{post.report_count || 0} report(s)</p>
                 </div>
+                
+                {post.reports && post.reports.length > 0 && (
+                  <div className="reports-reasons-list">
+                    <h4>Report Reasons:</h4>
+                    <ul>
+                      {post.reports.map((report) => (
+                        <li key={report.id}>
+                          <span className="report-reason">
+                            {report.reason && report.reason.trim().length > 0 ? (
+                              report.reason
+                            ) : (
+                              <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>No reason given</span>
+                            )}
+                          </span>
+                          <span className="report-date">
+                            {new Date(report.created_at).toLocaleDateString()}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 
               </div>
             ))}

@@ -91,7 +91,7 @@ async def get_reported_posts(current_moderator: dict = Depends(get_current_moder
         else:
             if report.created_at > review_map[report.review_id]["latest_reported_at"]:
                 review_map[report.review_id]["latest_reported_at"] = report.created_at
-                review_map[report.review_id]["reports"].append(report)
+            review_map[report.review_id]["reports"].append(report)
 
 
     comment_map = {}
@@ -105,7 +105,7 @@ async def get_reported_posts(current_moderator: dict = Depends(get_current_moder
         else:
             if report.created_at > comment_map[report.comment_id]["latest_reported_at"]:
                 comment_map[report.comment_id]["latest_reported_at"] = report.created_at
-                comment_map[report.comment_id]["reports"].append(report)
+            comment_map[report.comment_id]["reports"].append(report)
 
     return {
         "reported_posts": review_map,
