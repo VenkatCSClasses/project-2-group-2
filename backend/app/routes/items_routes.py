@@ -207,6 +207,16 @@ async def review_item(request: Request, item_id: str, form: ReviewForm = Depends
         db.commit()
         db.refresh(review)
 
+        # Auto-upvote the review by the author
+        from app.models import Vote
+        auto_vote = Vote(
+            user_id=user.id,
+            review_id=review.id,
+            is_upvote=True
+        )
+        db.add(auto_vote)
+        db.commit()
+
         db.refresh(item)  # Refresh the item to get the latest reviews
         item.average_rating = calculate_average_rating(item.reviews)
         db.add(item)

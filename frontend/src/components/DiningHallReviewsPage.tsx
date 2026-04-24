@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ArrowLeft } from 'lucide-react'
 import FeedPostCard from './feed/FeedPostCard'
 import { collectCommentSubtreeIds } from './feed/commentThread'
 import type {
@@ -583,7 +584,7 @@ function DiningHallReviewsPage({
             className="dining-reviews-back-button"
             onClick={onBack}
           >
-            ←
+            <ArrowLeft size={24} />
           </button>
 
           <h1 className="dining-reviews-title">Dining Hall Reviews</h1>

@@ -58,6 +58,15 @@ async def create_post(form: ReviewForm = Depends(), item_id: str = "", current_u
     db.commit()
     db.refresh(new_post)
 
+    from app.models import Vote
+    auto_vote = Vote(
+        user_id=user.id,
+        review_id=new_post.id,
+        is_upvote=True
+    )
+    db.add(auto_vote)
+    db.commit()
+
     return {
         "message": "Post created successfully",
         "post": serialize_review(
