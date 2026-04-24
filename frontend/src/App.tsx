@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import './App.css'
 import FeedPage from './components/FeedPage'
 import ProfilePicturePage from './components/ProfilePicturePage'
@@ -15,8 +16,8 @@ type UploadSelection = {
 }
 
 function App() {
+  const navigate = useNavigate()
   const [token, setToken] = useState<string | null>(localStorage.getItem('accessToken'))
-  const [page, setPage] = useState<'feed' | 'upload' | 'profile' | 'diningReviews' | 'reportedPosts'>('feed')
   const [showPfpSetup, setShowPfpSetup] = useState(false)
   const [uploadSelection, setUploadSelection] = useState<UploadSelection>({
     diningHall: '',
@@ -28,53 +29,95 @@ function App() {
     return (
       <ProfilePicturePage
         token={token}
-        onComplete={() => setShowPfpSetup(false)}
-      />
-    )
-  }
-
-  if (!token) {
-    return (
-      <AuthPage
-        onAuthSuccess={setToken}
-        onRegisterSuccess={(newToken) => {
-          setToken(newToken)
-          setShowPfpSetup(true)
+        onComplete={() => {
+          setShowPfpSetup(false)
+          navigate('/feed')
         }}
       />
     )
   }
 
-  return page === 'feed' ? (
-    <FeedPage
-      token={token}
-      onOpenUpload={(selection) => {
-        setUploadSelection(selection)
-        setPage('upload')
-      }}
-      onOpenProfile={() => setPage('profile')}
-      onOpenDiningReviews={() => setPage('diningReviews')}
-      onOpenReportedPosts={() => setPage('reportedPosts')}
-    />
-  ) : page === 'profile' ? (
-    <ProfilePage token={token} onBack={() => setPage('feed')} />
-  ) : page === 'reportedPosts' ? (
-    <ReportedPostsPage token={token} onBack={() => setPage('feed')} />
-  ) : page === 'diningReviews' ? (
-    <DiningHallReviewsPage
-      token={token}
-      onBack={() => setPage('feed')}
-    />
-  ) : (
-    <main className="app-shell">
-      <RatingUploadPage
-        token={token}
-        onBack={() => setPage('feed')}
-        initialDiningHall={uploadSelection.diningHall}
-        initialItemId={uploadSelection.itemId}
-        initialItemName={uploadSelection.itemName}
-      />
-    </main>
+  const LogoutRoute = () => {
+    useEffect(() => {
+      localStorage.removeItem('accessToken')
+      setToken(null)
+      navigate('/login')
+    }, [])
+    return null
+  }
+
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to={token ? "/feed" : "/login"} replace />} />
+      <Route path="/logout" element={<LogoutRoute />} />
+
+      {!token ? (
+        <>
+          <Route
+            path="/login"
+            element={
+              <AuthPage
+                onAuthSuccess={(newToken) => {
+                  setToken(newToken)
+                  navigate('/feed')
+                }}
+                onRegisterSuccess={(newToken) => {
+                  setToken(newToken)
+                  setShowPfpSetup(true)
+                }}
+              />
+            }
+          />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </>
+      ) : (
+        <>
+          <Route path="/login" element={<Navigate to="/feed" replace />} />
+          <Route
+            path="/feed"
+            element={
+              <FeedPage
+                token={token}
+                onOpenUpload={(selection) => {
+                  setUploadSelection(selection)
+                  navigate('/upload')
+                }}
+                onOpenProfile={() => navigate('/profile')}
+                onOpenDiningReviews={() => navigate('/dining-reviews')}
+                onOpenReportedPosts={() => navigate('/reported-posts')}
+              />
+            }
+          />
+          <Route
+            path="/profile"
+            element={<ProfilePage token={token} onBack={() => navigate('/feed')} />}
+          />
+          <Route
+            path="/reported-posts"
+            element={<ReportedPostsPage token={token} onBack={() => navigate('/feed')} />}
+          />
+          <Route
+            path="/dining-reviews"
+            element={<DiningHallReviewsPage token={token} onBack={() => navigate('/feed')} />}
+          />
+          <Route
+            path="/upload"
+            element={
+              <main className="app-shell">
+                <RatingUploadPage
+                  token={token}
+                  onBack={() => navigate('/feed')}
+                  initialDiningHall={uploadSelection.diningHall}
+                  initialItemId={uploadSelection.itemId}
+                  initialItemName={uploadSelection.itemName}
+                />
+              </main>
+            }
+          />
+          <Route path="*" element={<Navigate to="/feed" replace />} />
+        </>
+      )}
+    </Routes>
   )
 }
 

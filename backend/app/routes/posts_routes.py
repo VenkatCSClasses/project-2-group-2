@@ -211,6 +211,27 @@ async def report_post(post_id: str, reason: str = None, current_user: dict = Dep
     return {"message": "Post reported successfully", "post_id": post.id, "report_count": report_count}
 
 
+@router.post("/{post_id}/clear-reports")
+async def clear_reports(post_id: str, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """
+    Clear reports for a post.
+
+    This endpoint allows moderators to clear all reports for a specific post.
+
+    - **post_id**: The ID of the post for which to clear reports.
+    """
+    post_id = parse_uuid(post_id)
+    post = get_or_404(db, Review, post_id)
+
+    if current_user["role"] not in {"moderator", "admin"}:
+        raise HTTPException(status_code=403, detail="You do not have permission to clear reports for this post")
+
+    db.query(Report).filter(Report.review_id == post.id).delete()
+    db.commit()
+    return {"message": "Reports cleared successfully", "post_id": post.id}
+
+
+
 @router.post("/{post_id}/delete")
 async def delete_post(post_id: str, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """

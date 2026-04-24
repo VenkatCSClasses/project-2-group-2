@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import './ProfileDropdown.css'
 import { jwtDecode } from 'jwt-decode'
 
@@ -20,6 +21,7 @@ interface ProfileDropdownProps {
 
 export default function ProfileDropdown({ currentUserPfp, onOpenProfile, onOpenReportedPosts, token }: ProfileDropdownProps) {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
+  const navigate = useNavigate()
   const tokenInfo = jwtDecode<TokenInfo>(token)
 
   return (
@@ -68,8 +70,8 @@ export default function ProfileDropdown({ currentUserPfp, onOpenProfile, onOpenR
 
           <button className="profile-dropdown-item" type="button"
             onClick={() => {
-              localStorage.removeItem('accessToken')
-              window.location.reload()
+              setIsProfileMenuOpen(false)
+              navigate('/logout')
             }}
           >
             Logout

@@ -85,7 +85,22 @@ export default function ReportedPostsPage({ token, onBack }: ReportedPostsPagePr
     }
   };
 
-  const handleClearReports = async (_postId: string) => {
+  const handleClearReports = async (postId: string) => {
+    if (!window.confirm("Are you sure you want to clear reports for this post?")) return;
+    try {
+      const response = await fetch(`${API_BASE_URL}/posts/${postId}/clear-reports`, {
+        method: 'POST',
+        headers: authHeaders,
+      });
+      if (response.ok) {
+        setPosts((current) => current.filter((post) => post.id !== postId));
+      } else {
+        alert("Failed to clear reports");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Network error");
+    }
   }
 
   const handleVote = (_postId: string, _vote: VoteSelection) => {};
