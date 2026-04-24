@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Plus, User, Flame, Clock } from 'lucide-react'
 import FeedPostCard from './feed/FeedPostCard'
 import ProfileDropdown from './ProfileDropdown'
 import { collectCommentSubtreeIds } from './feed/commentThread'
@@ -38,7 +39,7 @@ function FeedPage({
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const [filterMode, setFilterMode] = useState<'latest' | 'top'>('latest')
-
+  
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [selectedPlace, setSelectedPlace] = useState<PlaceKey>('campus')
   const [menuItems, setMenuItems] = useState<FoodItem[]>([])
@@ -48,7 +49,7 @@ function FeedPage({
   const [currentUserPfp, setCurrentUserPfp] = useState<string | null>(null)
   const [currentUsername, setCurrentUsername] = useState('')
   const [currentUserRole, setCurrentUserRole] = useState<ViewerRole>('')
-
+  const [isDesktop, setIsDesktop] = useState(false)
   const authHeaders = useMemo(
     () => (token ? { Authorization: `Bearer ${token}` } : undefined),
     [token]
@@ -218,11 +219,26 @@ function FeedPage({
     void loadUser()
   }, [authHeaders, loadPosts])
 
+  const shouldShowMenu = isDesktop || isMenuOpen
+
   useEffect(() => {
-    if (isMenuOpen) {
+    if (shouldShowMenu) {
       void loadMenu(selectedPlace)
     }
-  }, [isMenuOpen, loadMenu, selectedPlace])
+  }, [shouldShowMenu, loadMenu, selectedPlace])
+
+  useEffect(() => {
+    function checkScreenSize() {
+      setIsDesktop(window.innerWidth >= 900)
+    }
+  
+    checkScreenSize()
+    window.addEventListener('resize', checkScreenSize)
+  
+    return () => {
+      window.removeEventListener('resize', checkScreenSize)
+    }
+  }, [])
 
   async function handleVote(postId: string, vote: VoteSelection) {
     try {
@@ -593,7 +609,7 @@ function FeedPage({
             className="icon-button"
             type="button"
             aria-label="Open menu"
-            onClick={() => setIsMenuOpen(true)}
+            onClick={() => setIsMenuOpen((current) => !current)}
           >
             <span className="hamburger-icon">
               <span></span>
@@ -611,7 +627,17 @@ function FeedPage({
               )
             }
           >
-            {filterMode === 'latest' ? 'Latest' : 'Top'}
+            {filterMode === 'latest' ? (
+              <>
+                <Clock size={18} />
+                <span>Latest</span>
+              </>
+            ) : (
+              <>
+                <Flame size={18} />
+                <span>Top</span>
+              </>
+            )}
           </button>
 
           <ProfileDropdown currentUserPfp={currentUserPfp} onOpenProfile={onOpenProfile} onOpenReportedPosts={onOpenReportedPosts} token={token} />
@@ -713,11 +739,11 @@ function FeedPage({
               </div>
 
               <button
-                className="floating-add-button"
+                className="floating-add-button has-circular-bg"
                 type="button"
                 onClick={() => setIsUploadPopupOpen(false)}
               >
-                +
+                <Plus size={24} />
               </button>
             </div>
           </div>
@@ -726,20 +752,24 @@ function FeedPage({
         {!isUploadPopupOpen && (
           <div className="floating-add-wrapper">
             <button
-              className="floating-add-button"
+              className="floating-add-button has-circular-bg"
               type="button"
               onClick={() => setIsUploadPopupOpen(true)}
             >
-              +
+              <Plus size={24} />
             </button>
           </div>
         )}
       </div>
 
-      {isMenuOpen && (
+      {shouldShowMenu && (
         <div
-          className="menu-overlay"
-          onClick={() => setIsMenuOpen(false)}
+          className={`menu-overlay ${isDesktop ? 'menu-overlay-desktop' : ''}`}
+          onClick={() => {
+            if (!isDesktop) {
+              setIsMenuOpen(false)
+            }
+          }}
           role="button"
           tabIndex={0}
           onKeyDown={(e) => {
