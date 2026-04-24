@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Plus, User, Flame, Clock } from 'lucide-react'
 import FeedPostCard from './feed/FeedPostCard'
 import { collectCommentSubtreeIds } from './feed/commentThread'
 import type {
@@ -609,7 +610,17 @@ function FeedPage({
               )
             }
           >
-            {filterMode === 'latest' ? 'Latest' : 'Top'}
+            {filterMode === 'latest' ? (
+              <>
+                <Clock size={18} />
+                <span>Latest</span>
+              </>
+            ) : (
+              <>
+                <Flame size={18} />
+                <span>Top</span>
+              </>
+            )}
           </button>
 
           <button
@@ -629,7 +640,7 @@ function FeedPage({
                 className="profile-circle-img"
               />
             ) : (
-              <span className="profile-circle">👤</span>
+              <span className="profile-circle"><User size={20} /></span>
             )}
           </button>
         </header>
@@ -730,11 +741,11 @@ function FeedPage({
               </div>
 
               <button
-                className="floating-add-button"
+                className="floating-add-button has-circular-bg"
                 type="button"
                 onClick={() => setIsUploadPopupOpen(false)}
               >
-                +
+                <Plus size={24} />
               </button>
             </div>
           </div>
@@ -743,11 +754,11 @@ function FeedPage({
         {!isUploadPopupOpen && (
           <div className="floating-add-wrapper">
             <button
-              className="floating-add-button"
+              className="floating-add-button has-circular-bg"
               type="button"
               onClick={() => setIsUploadPopupOpen(true)}
             >
-              +
+              <Plus size={24} />
             </button>
           </div>
         )}

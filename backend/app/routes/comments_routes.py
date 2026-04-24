@@ -55,13 +55,22 @@ async def comment_on_post(
     db.commit()
     db.refresh(new_comment)
 
+    from app.models import Vote
+    auto_vote = Vote(
+        user_id=user.id,
+        comment_id=new_comment.id,
+        is_upvote=True
+    )
+    db.add(auto_vote)
+    db.commit()
+
     return {
         "message": "Comment added successfully",
         "comment": serialize_comment(
             db,
             new_comment,
             author=user,
-            viewer_vote=None,
+            viewer_vote="up",
         ),
     }
 

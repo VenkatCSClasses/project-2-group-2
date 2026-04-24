@@ -57,7 +57,10 @@
   font-weight: 700;
   color: #111827;
   font-size: 1rem;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .profile-circle {
@@ -195,21 +198,26 @@
   font-size: 0.98rem;
   color: #111827;
   text-wrap: pretty;
+  text-align: left;
 }
 
 .feed-image-frame {
   overflow: hidden;
   border-radius: 12px;
   background: #f3f4f6;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
 }
 
 .feed-image {
   width: 100%;
+  height: auto;
   display: block;
   border-radius: 0;
   border: none;
   object-fit: cover;
-  max-height: 440px;
+  max-height: 85vh;
   background: transparent;
 }
 
@@ -1057,4 +1065,36 @@
 
 .feed-star-display.empty {
   color: #d4d4d8;
+}
+.has-circular-bg {
+  background-color: var(--primary-color, #111827);
+  color: white;
+  border-radius: 50%;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-size: 1.5rem !important; /* override the 4.4rem */
+}
+
+/* Update original floating button to reset hover if it has bg */
+.floating-add-button.has-circular-bg {
+  color: white;
+}
+.floating-add-button.has-circular-bg:hover {
+  transform: scale(1.05);
+  background-color: var(--primary-hover, rgba(17, 24, 39, 0.9));
+}
+
+@media (min-width: 641px) {
+  .feed-topbar {
+    max-width: 96%;
+    margin: 0 auto;
+  }
+  .feed-list {
+    max-width: 60%;
+    margin: 0 auto;
+  }
 }

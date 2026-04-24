@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
+import { ArrowLeft } from 'lucide-react'
 import DiningHallPicker from './rating-upload/DiningHallPicker'
 import ItemPicker from './rating-upload/ItemPicker'
 import StarRatingInput from './rating-upload/StarRatingInput'
@@ -427,6 +428,7 @@ function RatingUploadPage({
       setShowItemPicker(false)
       setHoverRating(null)
   
+      window.scrollTo(0, 0)
       onBack()
     } catch (error) {
       console.error('review submit fetch error:', error)
@@ -441,7 +443,7 @@ function RatingUploadPage({
       <div className="rating-card">
         <div className="rating-header">
           <button className="inline-back-button" type="button" onClick={onBack}>
-            ←
+            <ArrowLeft size={24} />
           </button>
           <h2 className="rating-title">Upload Rating</h2>
         </div>
