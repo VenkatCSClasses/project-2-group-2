@@ -36,7 +36,7 @@ function FeedPage({
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const [filterMode, setFilterMode] = useState<'latest' | 'top'>('latest')
-
+  
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [selectedPlace, setSelectedPlace] = useState<PlaceKey>('campus')
   const [menuItems, setMenuItems] = useState<FoodItem[]>([])
@@ -46,7 +46,7 @@ function FeedPage({
   const [currentUserPfp, setCurrentUserPfp] = useState<string | null>(null)
   const [currentUsername, setCurrentUsername] = useState('')
   const [currentUserRole, setCurrentUserRole] = useState<ViewerRole>('')
-
+  const [isDesktop, setIsDesktop] = useState(false)
   const authHeaders = useMemo(
     () => (token ? { Authorization: `Bearer ${token}` } : undefined),
     [token]
@@ -216,11 +216,26 @@ function FeedPage({
     void loadUser()
   }, [authHeaders, loadPosts])
 
+  const shouldShowMenu = isDesktop || isMenuOpen
+
   useEffect(() => {
-    if (isMenuOpen) {
+    if (shouldShowMenu) {
       void loadMenu(selectedPlace)
     }
-  }, [isMenuOpen, loadMenu, selectedPlace])
+  }, [shouldShowMenu, loadMenu, selectedPlace])
+
+  useEffect(() => {
+    function checkScreenSize() {
+      setIsDesktop(window.innerWidth >= 900)
+    }
+  
+    checkScreenSize()
+    window.addEventListener('resize', checkScreenSize)
+  
+    return () => {
+      window.removeEventListener('resize', checkScreenSize)
+    }
+  }, [])
 
   async function handleVote(postId: string, vote: VoteSelection) {
     try {
@@ -591,7 +606,7 @@ function FeedPage({
             className="icon-button"
             type="button"
             aria-label="Open menu"
-            onClick={() => setIsMenuOpen(true)}
+            onClick={() => setIsMenuOpen((current) => !current)}
           >
             <span className="hamburger-icon">
               <span></span>
@@ -753,10 +768,14 @@ function FeedPage({
         )}
       </div>
 
-      {isMenuOpen && (
+      {shouldShowMenu && (
         <div
-          className="menu-overlay"
-          onClick={() => setIsMenuOpen(false)}
+          className={`menu-overlay ${isDesktop ? 'menu-overlay-desktop' : ''}`}
+          onClick={() => {
+            if (!isDesktop) {
+              setIsMenuOpen(false)
+            }
+          }}
           role="button"
           tabIndex={0}
           onKeyDown={(e) => {
