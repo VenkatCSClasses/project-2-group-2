@@ -2,22 +2,24 @@ import { useState } from 'react'
 import { Ellipsis } from 'lucide-react'
 import { useDismissibleLayer } from './useDismissibleLayer'
 
+export type ActionItem = {
+  label: string
+  danger?: boolean
+  onClick: () => void
+}
+
 type FeedActionMenuProps = {
   menuLabel: string
-  actionLabel: string
-  onAction: () => void
+  actions: ActionItem[]
   className?: string
   triggerClassName?: string
-  danger?: boolean
 }
 
 function FeedActionMenu({
   menuLabel,
-  actionLabel,
-  onAction,
+  actions,
   className = 'feed-overflow-menu',
   triggerClassName = 'overflow-trigger',
-  danger = false,
 }: FeedActionMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
   const menuRef = useDismissibleLayer<HTMLDivElement>(isOpen, () =>
@@ -39,19 +41,22 @@ function FeedActionMenu({
 
       {isOpen && (
         <div className="overflow-menu-panel" role="menu">
-          <button
-            className={`overflow-menu-item ${
-              danger ? 'overflow-menu-item-danger' : ''
-            }`}
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              setIsOpen(false)
-              onAction()
-            }}
-          >
-            {actionLabel}
-          </button>
+          {actions.map((action, index) => (
+            <button
+              key={index}
+              className={`overflow-menu-item ${
+                action.danger ? 'overflow-menu-item-danger' : ''
+              }`}
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setIsOpen(false)
+                action.onClick()
+              }}
+            >
+              {action.label}
+            </button>
+          ))}
         </div>
       )}
     </div>

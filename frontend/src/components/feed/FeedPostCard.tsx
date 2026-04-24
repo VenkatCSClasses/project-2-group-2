@@ -103,16 +103,21 @@ function FeedPostCard({
 
           <FeedActionMenu
             menuLabel="Post actions"
-            actionLabel={canDeletePost ? "Remove post" : "Report post"}
-            danger={canDeletePost}
-            onAction={() => {
-              if (canDeletePost) {
-                onDeletePost();
-                return;
-              }
-
-              onReportPost();
-            }}
+            actions={[
+              ...(canDeletePost
+                ? [
+                    {
+                      label: "Remove post",
+                      danger: true,
+                      onClick: onDeletePost,
+                    },
+                  ]
+                : []),
+              {
+                label: "Report post",
+                onClick: onReportPost,
+              },
+            ]}
           />
         </div>
       </header>
