@@ -7,7 +7,7 @@ from app.utils import get_current_user, get_current_admin, process_and_save_imag
 from app.routes.helpers import get_or_404, parse_uuid
 from app.database import get_db
 from sqlmodel import Session
-from app.models import FoodItem, Review, User
+from app.models import FoodItem, FoodPlace, Review, User
 from uuid import UUID
 from sqlalchemy import or_
 from app.serde import serialize_reviews
@@ -110,6 +110,45 @@ async def create_item(item: FoodItemCreateForm = Depends(), db: Session = Depend
         raise HTTPException(status_code=500, detail="Error creating item") from e
     return {"message": "Item created successfully", "item": new_item}
 
+@router.get("/by-place/{place_name}")
+async def get_all_unique_items_by_place(
+    place_name: str,
+    db: Session = Depends(get_db),
+    ):
+    """
+    Get all unique historical food items for a dining hall.
+
+    This returns one item per food name.
+    """
+
+    place = db.query(FoodPlace).filter(FoodPlace.name == place_name).first()
+
+    if not place:
+        raise HTTPException(status_code=404, detail="Place not found")
+
+    all_items = (
+        db.query(FoodItem)
+        .filter(FoodItem.food_place_id == place.id)
+        .order_by(FoodItem.name.asc(), FoodItem.menu_date.desc())
+        .all()
+    )
+
+    unique_items_by_name = {}
+
+    for item in all_items:
+        key = item.name.strip().lower()
+
+        if key not in unique_items_by_name:
+            unique_items_by_name[key] = item
+
+    unique_items = list(unique_items_by_name.values())
+
+    return {
+        "place_id": str(place.id),
+        "place_name": place.name,
+        "items": unique_items,
+        "count": len(unique_items),
+    }
 
 @router.get("/{item_id}")
 async def get_item(item_id: str, db: Session = Depends(get_db)):
