@@ -89,34 +89,37 @@ async def get_reported_posts(current_moderator: dict = Depends(get_current_moder
     review_reports = db.query(Report).filter(Report.review_id.is_not(None)).order_by(Report.created_at.desc()).all()
     comment_reports = db.query(Report).filter(Report.comment_id.is_not(None)).order_by(Report.created_at.desc()).all()
 
-    seen_reviews = set()
-    reported_posts = []
+    review_map = {}
     for report in review_reports:
-        if report.review_id in seen_reviews:
-            continue
-        seen_reviews.add(report.review_id)
-        review = db.get(Review, report.review_id)
-        if review:
-            reported_post = serialize_review(db, review, reports=True)
-            reported_post["latest_reported_at"] = report.created_at
-            reported_posts.append(reported_post)
+        if report.review_id not in review_map:
+            review = db.get(Review, report.review_id)
+            if review:
+                review_map[report.review_id] = serialize_review(db, review, reports=True)
+                review_map[report.review_id]["latest_reported_at"] = report.created_at
+                review_map[report.review_id]["reports"] = [report]
+        else:
+            if report.created_at > review_map[report.review_id]["latest_reported_at"]:
+                review_map[report.review_id]["latest_reported_at"] = report.created_at
+            review_map[report.review_id]["reports"].append(report)
 
-    seen_comments = set()
-    reported_comments = []
+
+    comment_map = {}
     for report in comment_reports:
-        if report.comment_id in seen_comments:
-            continue
-        seen_comments.add(report.comment_id)
-        comment = db.get(Comment, report.comment_id)
-        if comment:
-            reported_comment = serialize_comment(db, comment, reports=True)
-            reported_comment["latest_reported_at"] = report.created_at
-            reported_comments.append(reported_comment)
+        if report.comment_id not in comment_map:
+            comment = db.get(Comment, report.comment_id)
+            if comment:
+                comment_map[report.comment_id] = serialize_comment(db, comment, reports=True)
+                comment_map[report.comment_id]["latest_reported_at"] = report.created_at
+                comment_map[report.comment_id]["reports"] = [report]
+        else:
+            if report.created_at > comment_map[report.comment_id]["latest_reported_at"]:
+                comment_map[report.comment_id]["latest_reported_at"] = report.created_at
+            comment_map[report.comment_id]["reports"].append(report)
 
     return {
-        "reported_posts": reported_posts,
-        "reported_comments": reported_comments,
-        "count": len(reported_posts) + len(reported_comments),
+        "reported_posts": review_map,
+        "reported_comments": comment_map,
+        "count": len(review_map) + len(comment_map),
     }
 
 
@@ -215,6 +218,27 @@ async def report_post(post_id: str, reason: str = None, current_user: dict = Dep
 
     report_count = db.query(Report).filter(Report.review_id == post.id).count()
     return {"message": "Post reported successfully", "post_id": post.id, "report_count": report_count}
+
+
+@router.post("/{post_id}/clear-reports")
+async def clear_reports(post_id: str, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """
+    Clear reports for a post.
+
+    This endpoint allows moderators to clear all reports for a specific post.
+
+    - **post_id**: The ID of the post for which to clear reports.
+    """
+    post_id = parse_uuid(post_id)
+    post = get_or_404(db, Review, post_id)
+
+    if current_user["role"] not in {"moderator", "admin"}:
+        raise HTTPException(status_code=403, detail="You do not have permission to clear reports for this post")
+
+    db.query(Report).filter(Report.review_id == post.id).delete()
+    db.commit()
+    return {"message": "Reports cleared successfully", "post_id": post.id}
+
 
 
 @router.post("/{post_id}/delete")

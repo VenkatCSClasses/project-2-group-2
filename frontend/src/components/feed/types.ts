@@ -9,6 +9,7 @@ export type FeedPageProps = {
   onOpenUpload: (selection: UploadSelection) => void
   onOpenProfile: () => void
   onOpenDiningReviews: () => void
+  onOpenReportedPosts: () => void
 }
 
 export type ViewerRole = 'user' | 'moderator' | 'admin' | ''
@@ -28,6 +29,35 @@ export type Post = {
   downvotes: number
   viewer_vote: VoteSelection
   comment_count: number
+}
+
+
+export type Report = {
+  id: string
+  comment_id: string | null
+  created_at: string
+  reporter_id: string
+  review_id: string | null
+  reason: string
+}
+
+export type ReportedPost = {
+  id: string
+  author_id: string
+  author_username: string | null
+  food_item_id: string | null
+  food_item_name: string | null
+  star_rating: number
+  content: string | null
+  image_url: string | null
+  created_at: string
+  upvotes: number
+  downvotes: number
+  viewer_vote: VoteSelection
+  comment_count: number
+  latest_reported_at: string
+  report_count: number
+  reports: Report[]
 }
 
 export type Comment = {

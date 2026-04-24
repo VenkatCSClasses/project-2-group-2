@@ -205,18 +205,21 @@ function FeedCommentTree({
                     className="feed-overflow-menu feed-comment-overflow-menu"
                     triggerClassName="overflow-trigger overflow-trigger-comment"
                     menuLabel="Comment actions"
-                    actionLabel={
-                      canDeleteComment ? 'Remove comment' : 'Report comment'
-                    }
-                    danger={canDeleteComment}
-                    onAction={() => {
-                      if (canDeleteComment) {
-                        onDeleteComment(comment.id)
-                        return
-                      }
-
-                      onReportComment(comment.id)
-                    }}
+                    actions={[
+                      ...(canDeleteComment
+                        ? [
+                            {
+                              label: 'Remove comment',
+                              danger: true,
+                              onClick: () => onDeleteComment(comment.id),
+                            },
+                          ]
+                        : []),
+                      {
+                        label: 'Report comment',
+                        onClick: () => onReportComment(comment.id),
+                      },
+                    ]}
                   />
                 </div>
 

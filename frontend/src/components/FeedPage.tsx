@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Plus, User, Flame, Clock } from 'lucide-react'
+import { Plus, Flame, Clock } from 'lucide-react'
 import FeedPostCard from './feed/FeedPostCard'
+import ProfileDropdown from './ProfileDropdown'
 import { collectCommentSubtreeIds } from './feed/commentThread'
 import type {
   FeedPageProps,
@@ -16,6 +17,7 @@ import type {
 } from './feed/types'
 import { createInitialThreadState } from './feed/utils'
 import './FeedPage.css'
+import ReportModal from './ReportModal'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
@@ -29,6 +31,7 @@ function FeedPage({
   onOpenUpload,
   onOpenProfile,
   onOpenDiningReviews,
+  onOpenReportedPosts,
 }: FeedPageProps) {
   const [posts, setPosts] = useState<Post[]>([])
   const [threadStates, setThreadStates] = useState<Record<string, ThreadState>>(
@@ -48,6 +51,9 @@ function FeedPage({
   const [currentUsername, setCurrentUsername] = useState('')
   const [currentUserRole, setCurrentUserRole] = useState<ViewerRole>('')
   const [isDesktop, setIsDesktop] = useState(false)
+  const [reportingPostId, setReportingPostId] = useState<string | null>(null)
+  const [reportingCommentId, setReportingCommentId] = useState<string | null>(null)
+  
   const authHeaders = useMemo(
     () => (token ? { Authorization: `Bearer ${token}` } : undefined),
     [token]
@@ -353,11 +359,17 @@ function FeedPage({
     }
   }
 
-  async function handleReportPost(postId: string) {
+  async function handleReportPostSubmit(reason: string) {
+    if (!reportingPostId) return;
+    const postId = reportingPostId;
+    setReportingPostId(null);
     setMessage('')
 
     try {
-      const response = await fetch(`${API_BASE_URL}/posts/${postId}/report`, {
+      const url = new URL(`${API_BASE_URL}/posts/${postId}/report`);
+      if (reason) url.searchParams.append('reason', reason);
+
+      const response = await fetch(url.toString(), {
         method: 'POST',
         headers: authHeaders,
       })
@@ -433,20 +445,26 @@ function FeedPage({
     }
   }
 
-  async function handleReportComment(postId: string, commentId: string) {
+  async function handleReportCommentSubmit(reason: string) {
+    if (!reportingCommentId || !reportingPostId) return;
+    const postId = reportingPostId;
+    const commentId = reportingCommentId;
+    setReportingCommentId(null);
+    setReportingPostId(null);
+
     updateThreadState(postId, (current) => ({
       ...current,
       error: '',
     }))
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/posts/comments/${commentId}/report`,
-        {
-          method: 'POST',
-          headers: authHeaders,
-        }
-      )
+      const url = new URL(`${API_BASE_URL}/posts/comments/${commentId}/report`);
+      if (reason) url.searchParams.append('reason', reason);
+
+      const response = await fetch(url.toString(), {
+        method: 'POST',
+        headers: authHeaders,
+      })
 
       if (!response.ok) {
         updateThreadState(postId, (current) => ({
@@ -638,26 +656,7 @@ function FeedPage({
             )}
           </button>
 
-          <button
-            className="profile-button"
-            type="button"
-            aria-label="Profile"
-            onClick={onOpenProfile}
-          >
-            {currentUserPfp ? (
-              <img
-                src={
-                  currentUserPfp.startsWith('http')
-                    ? currentUserPfp
-                    : `${API_BASE_URL}${currentUserPfp}`
-                }
-                alt="Profile"
-                className="profile-circle-img"
-              />
-            ) : (
-              <span className="profile-circle"><User size={20} /></span>
-            )}
-          </button>
+          <ProfileDropdown currentUserPfp={currentUserPfp} onOpenProfile={onOpenProfile} onOpenReportedPosts={onOpenReportedPosts} token={token} />
         </header>
 
         <main className="feed-list">
@@ -682,7 +681,7 @@ function FeedPage({
                 onToggleComments={() => void toggleComments(post.id)}
                 onVote={(upvote) => void handleVote(post.id, upvote)}
                 onDeletePost={() => void handleDeletePost(post.id)}
-                onReportPost={() => void handleReportPost(post.id)}
+                onReportPost={() => setReportingPostId(post.id)}
                 onDraftChange={(value) =>
                   updateThreadState(post.id, (current) => ({
                     ...current,
@@ -721,9 +720,10 @@ function FeedPage({
                 onDeleteComment={(commentId) =>
                   void handleDeleteComment(post.id, commentId)
                 }
-                onReportComment={(commentId) =>
-                  void handleReportComment(post.id, commentId)
-                }
+                onReportComment={(commentId) => {
+                  setReportingPostId(post.id);
+                  setReportingCommentId(commentId);
+                }}
               />
             )
           })}
@@ -865,6 +865,16 @@ function FeedPage({
           </aside>
         </div>
       )}
+
+      <ReportModal
+        isOpen={reportingPostId !== null}
+        title={reportingCommentId ? "Report Comment" : "Report Post"}
+        onClose={() => {
+          setReportingPostId(null);
+          setReportingCommentId(null);
+        }}
+        onSubmit={reportingCommentId ? handleReportCommentSubmit : handleReportPostSubmit}
+      />
     </>
   )
 }
