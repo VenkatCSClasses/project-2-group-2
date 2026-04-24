@@ -1,15 +1,26 @@
 import { useState } from 'react'
 import './ProfileDropdown.css'
+import { jwtDecode } from 'jwt-decode'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+
+interface TokenInfo {
+  user_id: string
+  role: string
+  token_type: string
+  exp: number
+}
 
 interface ProfileDropdownProps {
   currentUserPfp: string | null
   onOpenProfile: () => void
+  onOpenReportedPosts?: () => void
+  token: string
 }
 
-export default function ProfileDropdown({ currentUserPfp, onOpenProfile }: ProfileDropdownProps) {
+export default function ProfileDropdown({ currentUserPfp, onOpenProfile, onOpenReportedPosts, token }: ProfileDropdownProps) {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
+  const tokenInfo = jwtDecode<TokenInfo>(token)
 
   return (
     <div className="profile-menu-container">
@@ -44,11 +55,16 @@ export default function ProfileDropdown({ currentUserPfp, onOpenProfile }: Profi
           >
             Profile
           </button>
-          <button className="profile-dropdown-item" type="button"
-            onClick={() => setIsProfileMenuOpen(false)}
-          >
-            Reported Posts
-          </button>
+          {tokenInfo && (tokenInfo.role === 'moderator' || tokenInfo.role === 'admin') && (
+            <button className="profile-dropdown-item" type="button"
+              onClick={() => {
+                setIsProfileMenuOpen(false)
+                if (onOpenReportedPosts) onOpenReportedPosts()
+              }}
+            >
+              Reported Posts
+            </button>
+          )}
 
           <button className="profile-dropdown-item" type="button"
             onClick={() => {

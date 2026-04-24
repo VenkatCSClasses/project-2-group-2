@@ -9,6 +9,7 @@ export type FeedPageProps = {
   onOpenUpload: (selection: UploadSelection) => void
   onOpenProfile: () => void
   onOpenDiningReviews: () => void
+  onOpenReportedPosts: () => void
 }
 
 export type ViewerRole = 'user' | 'moderator' | 'admin' | ''

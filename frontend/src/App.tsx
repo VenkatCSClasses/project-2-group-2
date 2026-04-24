@@ -6,6 +6,7 @@ import RatingUploadPage from './components/RatingUploadPage'
 import AuthPage from './components/AuthPage'
 import ProfilePage from './components/ProfilePage'
 import DiningHallReviewsPage from './components/DiningHallReviewsPage'
+import ReportedPostsPage from './components/ReportedPostsPage'
 
 type UploadSelection = {
   diningHall: string
@@ -15,7 +16,7 @@ type UploadSelection = {
 
 function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('accessToken'))
-  const [page, setPage] = useState<'feed' | 'upload' | 'profile' | 'diningReviews'>('feed')
+  const [page, setPage] = useState<'feed' | 'upload' | 'profile' | 'diningReviews' | 'reportedPosts'>('feed')
   const [showPfpSetup, setShowPfpSetup] = useState(false)
   const [uploadSelection, setUploadSelection] = useState<UploadSelection>({
     diningHall: '',
@@ -53,9 +54,12 @@ function App() {
       }}
       onOpenProfile={() => setPage('profile')}
       onOpenDiningReviews={() => setPage('diningReviews')}
+      onOpenReportedPosts={() => setPage('reportedPosts')}
     />
   ) : page === 'profile' ? (
     <ProfilePage token={token} onBack={() => setPage('feed')} />
+  ) : page === 'reportedPosts' ? (
+    <ReportedPostsPage token={token} onBack={() => setPage('feed')} />
   ) : page === 'diningReviews' ? (
     <DiningHallReviewsPage
       token={token}

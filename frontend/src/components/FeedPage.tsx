@@ -29,6 +29,7 @@ function FeedPage({
   onOpenUpload,
   onOpenProfile,
   onOpenDiningReviews,
+  onOpenReportedPosts,
 }: FeedPageProps) {
   const [posts, setPosts] = useState<Post[]>([])
   const [threadStates, setThreadStates] = useState<Record<string, ThreadState>>(
@@ -613,7 +614,7 @@ function FeedPage({
             {filterMode === 'latest' ? 'Latest' : 'Top'}
           </button>
 
-          <ProfileDropdown currentUserPfp={currentUserPfp} onOpenProfile={onOpenProfile} />
+          <ProfileDropdown currentUserPfp={currentUserPfp} onOpenProfile={onOpenProfile} onOpenReportedPosts={onOpenReportedPosts} token={token} />
         </header>
 
         <main className="feed-list">
