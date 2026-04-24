@@ -1087,14 +1087,92 @@
   transform: scale(1.05);
   background-color: var(--primary-hover, rgba(17, 24, 39, 0.9));
 }
+.upload-popup-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: transparent;
+}
+.menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  background: rgba(0, 0, 0, 0.22);
+}
 
-@media (min-width: 641px) {
+.menu-overlay-desktop {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: 33.333vw;
+  min-width: 320px;
+  max-width: 440px;
+  background: transparent;
+  pointer-events: none;
+}
+
+.menu-overlay-desktop .menu-drawer {
+  pointer-events: auto;
+}
+
+.menu-drawer {
+  width: 33.333vw;
+  min-width: 320px;
+  max-width: 440px;
+  height: 100vh;
+  background: white;
+  border-right: 1px solid #e5e7eb;
+  padding: 20px 16px 24px;
+  overflow-y: auto;
+}
+
+/* Desktop: sidebar always visible — offset feed and apply adaptive centering */
+@media (min-width: 900px) {
+  .feed-page {
+    margin-left: 33.333vw;
+    width: calc(100% - 33.333vw);
+  }
+
+  .feed-topbar .icon-button {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
   .feed-topbar {
     max-width: 96%;
     margin: 0 auto;
   }
+
+  .feed-list {
+    max-width: 75%;
+    margin: 0 auto;
+  }
+}
+
+@media (min-width: 1320px) {
+  .feed-page {
+    margin-left: 440px;
+    width: calc(100% - 440px);
+  }
+}
+
+/* Tablet/mid range: sidebar hidden — center content within full width */
+@media (min-width: 641px) and (max-width: 899px) {
+  .feed-topbar {
+    max-width: 96%;
+    margin: 0 auto;
+  }
+
   .feed-list {
     max-width: 60%;
     margin: 0 auto;
+  }
+}
+
+@media (max-width: 900px) {
+  .menu-drawer {
+    width: 80vw;
+    min-width: 0;
+    max-width: none;
   }
 }
