@@ -29,12 +29,10 @@ type DiningHallReviewsPageProps = {
 
 type SortMode = 'highest' | 'lowest' | 'az'
 
-function DiningHallReviewsPage({
-  token,
-  onBack,
-}: DiningHallReviewsPageProps) {
+function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
   const [selectedPlace, setSelectedPlace] = useState<PlaceKey>('campus')
   const [sortMode, setSortMode] = useState<SortMode>('highest')
+  const [searchQuery, setSearchQuery] = useState('')
 
   const [menuItems, setMenuItems] = useState<FoodItem[]>([])
   const [menuLoading, setMenuLoading] = useState(false)
@@ -45,9 +43,7 @@ function DiningHallReviewsPage({
   const [reviewsLoading, setReviewsLoading] = useState(false)
   const [reviewsError, setReviewsError] = useState('')
 
-  const [threadStates, setThreadStates] = useState<Record<string, ThreadState>>(
-    {}
-  )
+  const [threadStates, setThreadStates] = useState<Record<string, ThreadState>>({})
   const [message, setMessage] = useState('')
   const [currentUsername, setCurrentUsername] = useState('')
   const [currentUserRole, setCurrentUserRole] = useState<ViewerRole>('')
@@ -85,12 +81,7 @@ function DiningHallReviewsPage({
   function updateReviewCommentCount(postId: string, commentCount: number) {
     setReviews((current) =>
       current.map((post) =>
-        post.id === postId
-          ? {
-              ...post,
-              comment_count: commentCount,
-            }
-          : post
+        post.id === postId ? { ...post, comment_count: commentCount } : post
       )
     )
   }
@@ -99,35 +90,72 @@ function DiningHallReviewsPage({
     return reviews.find((post) => post.id === postId)?.comment_count ?? 0
   }
 
-  const loadMenu = useCallback(async (placeKey: PlaceKey) => {
-    setMenuLoading(true)
-    setMenuError('')
-    setSelectedItem(null)
-    setReviews([])
-    setReviewsError('')
+  const loadAllPlaceReviews = useCallback(
+    async (placeKey: PlaceKey) => {
+      setSelectedItem(null)
+      setReviewsLoading(true)
+      setReviewsError('')
+      setReviews([])
+      setThreadStates({})
 
-    try {
-      const placeName = PLACE_NAMES[placeKey]
-      const response = await fetch(
-        `${API_BASE_URL}/items/by-place/${encodeURIComponent(placeName)}`
-      )
-      const data = await response.json()
+      try {
+        const placeName = PLACE_NAMES[placeKey]
+        const response = await fetch(
+          `${API_BASE_URL}/posts/?place=${encodeURIComponent(placeName)}&start=0&limit=100`,
+          {
+            headers: authHeaders,
+          }
+        )
+        const data = await response.json()
 
-      if (!response.ok) {
-        setMenuItems([])
-        setMenuError('Could not load dining hall items')
-        return
+        if (!response.ok) {
+          setReviewsError('Could not load dining hall reviews')
+          return
+        }
+
+        setReviews(data.posts ?? [])
+      } catch (error) {
+        console.error(error)
+        setReviewsError('Network error while loading dining hall reviews')
+      } finally {
+        setReviewsLoading(false)
       }
+    },
+    [authHeaders]
+  )
 
-      setMenuItems(data.items ?? [])
-    } catch (error) {
-      console.error(error)
-      setMenuItems([])
-      setMenuError('Network error while loading dining hall items')
-    } finally {
-      setMenuLoading(false)
-    }
-  }, [])
+  const loadMenu = useCallback(
+    async (placeKey: PlaceKey) => {
+      setMenuLoading(true)
+      setMenuError('')
+      setSelectedItem(null)
+      setReviewsError('')
+
+      try {
+        const placeName = PLACE_NAMES[placeKey]
+        const response = await fetch(
+          `${API_BASE_URL}/items/by-place/${encodeURIComponent(placeName)}`
+        )
+        const data = await response.json()
+
+        if (!response.ok) {
+          setMenuItems([])
+          setMenuError('Could not load dining hall items')
+          return
+        }
+
+        setMenuItems(data.items ?? [])
+        void loadAllPlaceReviews(placeKey)
+      } catch (error) {
+        console.error(error)
+        setMenuItems([])
+        setMenuError('Network error while loading dining hall items')
+      } finally {
+        setMenuLoading(false)
+      }
+    },
+    [loadAllPlaceReviews]
+  )
 
   useEffect(() => {
     void loadMenu(selectedPlace)
@@ -328,10 +356,7 @@ function DiningHallReviewsPage({
 
       setReviews((current) => current.filter((post) => post.id !== postId))
       setThreadStates((current) => {
-        if (!(postId in current)) {
-          return current
-        }
-
+        if (!(postId in current)) return current
         const next = { ...current }
         delete next[postId]
         return next
@@ -554,7 +579,15 @@ function DiningHallReviewsPage({
   }
 
   const sortedMenuItems = useMemo(() => {
-    const next = [...menuItems]
+    const query = searchQuery.trim().toLowerCase()
+
+    const filtered = menuItems.filter((item) => {
+      const name = item.name?.toLowerCase() ?? ''
+      const description = item.description?.toLowerCase() ?? ''
+      return name.includes(query) || description.includes(query)
+    })
+
+    const next = [...filtered]
 
     if (sortMode === 'highest') {
       next.sort((a, b) => {
@@ -573,7 +606,79 @@ function DiningHallReviewsPage({
     }
 
     return next
-  }, [menuItems, sortMode])
+  }, [menuItems, sortMode, searchQuery])
+
+  function renderReviewCards(emptyMessage: string) {
+    return (
+      <div className="dining-review-cards-scroll">
+        {reviewsLoading && <p className="panel-status">Loading reviews...</p>}
+        {reviewsError && <p className="panel-status error">{reviewsError}</p>}
+        {message && <p className="panel-status">{message}</p>}
+        {!reviewsLoading && !reviewsError && reviews.length === 0 && (
+          <p className="panel-status">{emptyMessage}</p>
+        )}
+
+        {reviews.map((post) => {
+          const thread = getThread(post.id)
+
+          return (
+            <FeedPostCard
+              key={post.id}
+              post={post}
+              apiBaseUrl={API_BASE_URL}
+              thread={thread}
+              commentCount={post.comment_count ?? 0}
+              viewerRole={currentUserRole}
+              viewerUsername={currentUsername}
+              onToggleComments={() => void toggleComments(post.id)}
+              onVote={(upvote) => void handleVote(post.id, upvote)}
+              onDeletePost={() => void handleDeletePost(post.id)}
+              onReportPost={() => void handleReportPost(post.id)}
+              onDraftChange={(value) =>
+                updateThreadState(post.id, (current) => ({
+                  ...current,
+                  draft: value,
+                }))
+              }
+              onReplyDraftChange={(commentId, value) =>
+                updateThreadState(post.id, (current) => ({
+                  ...current,
+                  replyDrafts: {
+                    ...current.replyDrafts,
+                    [commentId]: value,
+                  },
+                }))
+              }
+              onReplyToggle={(commentId) =>
+                updateThreadState(post.id, (current) => ({
+                  ...current,
+                  replyTargetId:
+                    current.replyTargetId === commentId ? null : commentId,
+                  error: '',
+                }))
+              }
+              onCloseReply={() =>
+                updateThreadState(post.id, (current) => ({
+                  ...current,
+                  replyTargetId: null,
+                }))
+              }
+              onSubmitComment={(parentId) => void submitComment(post.id, parentId)}
+              onCommentVote={(commentId, upvote) =>
+                void handleCommentVote(post.id, commentId, upvote)
+              }
+              onDeleteComment={(commentId) =>
+                void handleDeleteComment(post.id, commentId)
+              }
+              onReportComment={(commentId) =>
+                void handleReportComment(post.id, commentId)
+              }
+            />
+          )
+        })}
+      </div>
+    )
+  }
 
   return (
     <main className="dining-reviews-page">
@@ -630,6 +735,16 @@ function DiningHallReviewsPage({
           </div>
         </div>
 
+        <div className="dining-search-row">
+          <input
+            className="dining-search-input"
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search food items..."
+          />
+        </div>
+
         <div className="dining-reviews-layout">
           <section className="dining-items-panel">
             <div className="panel-heading-row">
@@ -655,7 +770,14 @@ function DiningHallReviewsPage({
                   className={`review-menu-item-card ${
                     selectedItem?.id === item.id ? 'selected' : ''
                   }`}
-                  onClick={() => void loadItemReviews(item)}
+                  onClick={() => {
+                    if (selectedItem?.id === item.id) {
+                      void loadAllPlaceReviews(selectedPlace)
+                      return
+                    }
+                  
+                    void loadItemReviews(item)
+                  }}
                 >
                   <div className="review-menu-item-top">
                     <h3>{item.name}</h3>
@@ -678,10 +800,19 @@ function DiningHallReviewsPage({
 
           <section className="dining-review-cards-panel">
             {!selectedItem ? (
-              <div className="reviews-placeholder">
-                <h2>Select an item</h2>
-            
-              </div>
+              <>
+                <div className="selected-item-header">
+                  <div>
+                    <h2 className="selected-item-title">
+                      {selectedPlace === 'campus'
+                        ? 'All Campus Center Reviews'
+                        : 'All Terraces Reviews'}
+                    </h2>
+                  </div>
+                </div>
+
+                {renderReviewCards('No reviews found for this dining hall.')}
+              </>
             ) : (
               <>
                 <div className="selected-item-header">
@@ -693,83 +824,17 @@ function DiningHallReviewsPage({
                         : 'No ratings yet'}
                     </p>
                   </div>
+
+                  <button
+                    type="button"
+                    className="clear-selected-item-button"
+                    onClick={() => void loadAllPlaceReviews(selectedPlace)}
+                  >
+                    Show all reviews
+                  </button>
                 </div>
 
-                <div className="dining-review-cards-scroll">
-                  {reviewsLoading && (
-                    <p className="panel-status">Loading reviews...</p>
-                  )}
-                  {reviewsError && (
-                    <p className="panel-status error">{reviewsError}</p>
-                  )}
-                  {message && <p className="panel-status">{message}</p>}
-                  {!reviewsLoading && !reviewsError && reviews.length === 0 && (
-                    <p className="panel-status">No reviews for this item yet.</p>
-                  )}
-
-                  {reviews.map((post) => {
-                    const thread = getThread(post.id)
-
-                    return (
-                      <FeedPostCard
-                        key={post.id}
-                        post={post}
-                        apiBaseUrl={API_BASE_URL}
-                        thread={thread}
-                        commentCount={post.comment_count ?? 0}
-                        viewerRole={currentUserRole}
-                        viewerUsername={currentUsername}
-                        onToggleComments={() => void toggleComments(post.id)}
-                        onVote={(upvote) => void handleVote(post.id, upvote)}
-                        onDeletePost={() => void handleDeletePost(post.id)}
-                        onReportPost={() => void handleReportPost(post.id)}
-                        onDraftChange={(value) =>
-                          updateThreadState(post.id, (current) => ({
-                            ...current,
-                            draft: value,
-                          }))
-                        }
-                        onReplyDraftChange={(commentId, value) =>
-                          updateThreadState(post.id, (current) => ({
-                            ...current,
-                            replyDrafts: {
-                              ...current.replyDrafts,
-                              [commentId]: value,
-                            },
-                          }))
-                        }
-                        onReplyToggle={(commentId) =>
-                          updateThreadState(post.id, (current) => ({
-                            ...current,
-                            replyTargetId:
-                              current.replyTargetId === commentId
-                                ? null
-                                : commentId,
-                            error: '',
-                          }))
-                        }
-                        onCloseReply={() =>
-                          updateThreadState(post.id, (current) => ({
-                            ...current,
-                            replyTargetId: null,
-                          }))
-                        }
-                        onSubmitComment={(parentId) =>
-                          void submitComment(post.id, parentId)
-                        }
-                        onCommentVote={(commentId, upvote) =>
-                          void handleCommentVote(post.id, commentId, upvote)
-                        }
-                        onDeleteComment={(commentId) =>
-                          void handleDeleteComment(post.id, commentId)
-                        }
-                        onReportComment={(commentId) =>
-                          void handleReportComment(post.id, commentId)
-                        }
-                      />
-                    )
-                  })}
-                </div>
+                {renderReviewCards('No reviews for this item yet.')}
               </>
             )}
           </section>
