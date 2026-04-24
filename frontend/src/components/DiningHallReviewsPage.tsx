@@ -4,7 +4,6 @@ import { collectCommentSubtreeIds } from './feed/commentThread'
 import type {
   FoodItem,
   PlaceKey,
-  PlaceResponse,
   Post,
   PostDetailsResponse,
   ThreadState,
@@ -109,9 +108,9 @@ function DiningHallReviewsPage({
     try {
       const placeName = PLACE_NAMES[placeKey]
       const response = await fetch(
-        `${API_BASE_URL}/places/${encodeURIComponent(placeName)}`
+        `${API_BASE_URL}/items/by-place/${encodeURIComponent(placeName)}`
       )
-      const data: PlaceResponse = await response.json()
+      const data = await response.json()
 
       if (!response.ok) {
         setMenuItems([])
@@ -119,7 +118,7 @@ function DiningHallReviewsPage({
         return
       }
 
-      setMenuItems(data.place_info.food_items ?? [])
+      setMenuItems(data.items ?? [])
     } catch (error) {
       console.error(error)
       setMenuItems([])
@@ -680,10 +679,7 @@ function DiningHallReviewsPage({
             {!selectedItem ? (
               <div className="reviews-placeholder">
                 <h2>Select an item</h2>
-                <p>
-                  Click a menu item to open all reviews for that food item using
-                  the same cards as the feed.
-                </p>
+            
               </div>
             ) : (
               <>
