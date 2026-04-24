@@ -31,6 +31,25 @@ export type Post = {
   comment_count: number
 }
 
+
+export type ReportedPost = {
+  id: string
+  author_id: string
+  author_username: string | null
+  food_item_id: string | null
+  food_item_name: string | null
+  star_rating: number
+  content: string | null
+  image_url: string | null
+  created_at: string
+  upvotes: number
+  downvotes: number
+  viewer_vote: VoteSelection
+  comment_count: number
+  latest_reported_at: string
+  report_count: number
+}
+
 export type Comment = {
   id: string
   text: string

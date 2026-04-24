@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { ArrowLeft, Trash2, Ban } from 'lucide-react';
+import { ArrowLeft, Trash2, Ban, RefreshCw } from 'lucide-react';
 import FeedPostCard from './feed/FeedPostCard';
-import type { Post, ThreadState, VoteSelection, ViewerRole } from './feed/types';
+import type { Post, ThreadState, VoteSelection, ViewerRole, ReportedPost } from './feed/types';
 import { createInitialThreadState } from './feed/utils';
 import './ReportedPostsPage.css';
 
@@ -13,7 +13,7 @@ type ReportedPostsPageProps = {
 };
 
 export default function ReportedPostsPage({ token, onBack }: ReportedPostsPageProps) {
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<ReportedPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [threadStates] = useState<Record<string, ThreadState>>({});
@@ -85,6 +85,9 @@ export default function ReportedPostsPage({ token, onBack }: ReportedPostsPagePr
     }
   };
 
+  const handleClearReports = async (postId: string) => {
+  }
+
   const handleVote = (_postId: string, _vote: VoteSelection) => {};
   const handleToggleComments = (_postId: string) => {};
   const handleDraftChange = (_postId: string, _value: string) => {};
@@ -102,7 +105,7 @@ export default function ReportedPostsPage({ token, onBack }: ReportedPostsPagePr
         <button className="back-button" onClick={onBack} aria-label="Go back">
           <ArrowLeft className="icon" />
         </button>
-        <h2>Reported Posts</h2>
+        <h2 className="page-title">Reported Posts</h2>
       </header>
 
       <main className="reported-posts-content">
@@ -116,23 +119,6 @@ export default function ReportedPostsPage({ token, onBack }: ReportedPostsPagePr
           <div className="posts-list">
             {posts.map((post) => (
               <div key={post.id} className="reported-post-container">
-                <div className="moderator-actions">
-                  <button 
-                    className="mod-btn suspend-btn" 
-                    onClick={() => handleBanUser(post.author_username)}
-                    disabled={!post.author_username}
-                  >
-                    <Ban className="mod-icon" />
-                    Ban {post.author_username || 'Unknown'}
-                  </button>
-                  <button 
-                    className="mod-btn delete-btn" 
-                    onClick={() => handleDeletePost(post.id)}
-                  >
-                    <Trash2 className="mod-icon" />
-                    Delete Post
-                  </button>
-                </div>
                 <div className="card-wrapping-box">
                   <FeedPostCard
                     post={post}
@@ -155,6 +141,33 @@ export default function ReportedPostsPage({ token, onBack }: ReportedPostsPagePr
                     onReportComment={(cId) => handleReportComment(post.id, cId)}
                   />
                 </div>
+                <div className="moderator-actions">
+                  <button 
+                    className="mod-btn suspend-btn" 
+                    onClick={() => handleBanUser(post.author_username)}
+                    disabled={!post.author_username}
+                  >
+                    <Ban className="mod-icon" />
+                    Ban {post.author_username || 'Unknown'}
+                  </button>
+                  <button 
+                    className="mod-btn delete-btn" 
+                    onClick={() => handleDeletePost(post.id)}
+                  >
+                    <Trash2 className="mod-icon" />
+                    Delete Post
+                  </button>
+
+                  <button
+                    className="mod-btn clear-reports-btn"
+                    onClick={() => handleClearReports(post.id)}
+                  >
+                    <RefreshCw className="mod-icon" />
+                    Clear Reports
+                  </button>
+                <p className="report-count">{post.report_count || 0} report(s)</p>
+                </div>
+                
               </div>
             ))}
           </div>
