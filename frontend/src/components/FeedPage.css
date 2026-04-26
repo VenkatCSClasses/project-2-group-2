@@ -30,9 +30,12 @@
 .profile-button {
   width: 56px;
   height: 48px;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 0;
+  background: transparent;
+  border: none;
 }
 
 .hamburger-icon {
@@ -79,7 +82,8 @@
   height: 34px;
   border-radius: 999px;
   object-fit: cover;
-  border: 1px solid #e5e7eb;
+  border: none;
+  background: transparent;
 }
 
 .feed-list {
