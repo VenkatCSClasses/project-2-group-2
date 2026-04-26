@@ -41,6 +41,7 @@ services:
     volumes:
       - ./frontend:/usr/src/app
       - venv:/usr/src/app/.venv
+      - node_modules:/usr/src/app/node_modules
     depends_on:
       database:
         condition: service_healthy
@@ -87,3 +88,4 @@ volumes:
   postgres_data:
   venv:
   valkey_data:
+  node_modules:
