@@ -1,9 +1,7 @@
 FROM oven/bun:1
 WORKDIR /usr/src/app
 
-COPY package.json ./
-# Copy bun.lockb if it exists
-COPY bun.lock* ./
+COPY package.json bun.lock* ./
 
 RUN bun install
 
