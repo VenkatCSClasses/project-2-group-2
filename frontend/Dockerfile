@@ -8,6 +8,6 @@ RUN bun install
 COPY . .
 
 USER bun
-EXPOSE 3000
+EXPOSE 5173
 
-CMD ["bun", "run", "dev", "--", "--host"]
+CMD ["bun", "run", "dev", "--host", "0.0.0.0", "--port", "5173"]
