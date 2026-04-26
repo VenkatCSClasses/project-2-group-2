@@ -36,3 +36,39 @@
   background-color: #f3f4f6;
   color: #111827;
 }
+
+.profile-dropdown {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.profile-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 170px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 8px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+  z-index: 50;
+}
+
+.profile-dropdown-item {
+  width: 100%;
+  border: none;
+  background: white;
+  color: #111827;
+  text-align: left;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.profile-dropdown-item:hover {
+  background: #f3f4f6;
+}
