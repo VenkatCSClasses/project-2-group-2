@@ -1180,3 +1180,9 @@
     max-width: none;
   }
 }
+.feed-topbar-title {
+  text-align: center;
+  font-weight: 700;
+  color: #111827;
+  font-size: 1rem;
+}

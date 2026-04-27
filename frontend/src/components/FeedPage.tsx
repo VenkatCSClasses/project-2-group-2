@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Plus, Flame, Clock } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import FeedPostCard from './feed/FeedPostCard'
 import ProfileDropdown from './ProfileDropdown'
 import { collectCommentSubtreeIds } from './feed/commentThread'
@@ -39,7 +39,6 @@ function FeedPage({
   )
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
-  const [filterMode, setFilterMode] = useState<'latest' | 'top'>('latest')
   
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [selectedPlace, setSelectedPlace] = useState<PlaceKey>('campus')
@@ -599,23 +598,11 @@ function FeedPage({
   }
 
   const visiblePosts = useMemo(() => {
-    const next = [...posts]
-
-    if (filterMode === 'top') {
-      next.sort((a, b) => {
-        const scoreA = a.upvotes - a.downvotes
-        const scoreB = b.upvotes - b.downvotes
-        return scoreB - scoreA
-      })
-      return next
-    }
-
-    next.sort(
+    return [...posts].sort(
       (a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     )
-    return next
-  }, [posts, filterMode])
+  }, [posts])
 
   return (
     <>
@@ -634,27 +621,7 @@ function FeedPage({
             </span>
           </button>
 
-          <button
-            className="filter-button"
-            type="button"
-            onClick={() =>
-              setFilterMode((current) =>
-                current === 'latest' ? 'top' : 'latest'
-              )
-            }
-          >
-            {filterMode === 'latest' ? (
-              <>
-                <Clock size={18} />
-                <span>Latest</span>
-              </>
-            ) : (
-              <>
-                <Flame size={18} />
-                <span>Top</span>
-              </>
-            )}
-          </button>
+          <div className="feed-topbar-title">Feed</div>
 
           <ProfileDropdown currentUserPfp={currentUserPfp} onOpenProfile={onOpenProfile} onOpenReportedPosts={onOpenReportedPosts} token={token} />
         </header>
