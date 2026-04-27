@@ -202,7 +202,7 @@ async def review_item(request: Request, item_id: str, form: ReviewForm = Depends
         raise HTTPException(status_code=400, detail="Invalid UUID format")
 
     item = get_or_404(db, FoodItem, item_id)
-    user = get_or_404(db, User, current_user["user_id"])
+    user = get_or_404(db, User, UUID(current_user["user_id"]))
 
     image = form.image
 
