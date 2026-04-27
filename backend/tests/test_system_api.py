@@ -3,6 +3,9 @@ def test_global_root(client):
     assert response.status_code == 200
 
 def test_review_flow(client):
+    """
+    This test registers a user, logs in, retrieves items, submits a review for an item (while testing authentication), and checks that the review was saved correctly.
+    """
     resp = client.post("/auth/register", data={"username": "testuser", "password": "testpassword123", "email": "test@example.com"})
     assert resp.status_code == 200
     resp = client.post("/auth/login", data={"username": "testuser", "password": "testpassword123"})
