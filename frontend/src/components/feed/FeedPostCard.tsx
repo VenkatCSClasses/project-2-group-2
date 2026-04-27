@@ -5,6 +5,7 @@ import type { Post, ThreadState, ViewerRole, VoteSelection } from "./types";
 import {
   formatTimeAgo,
   getAvatarLetter,
+  resolveProfileImageSrc,
   renderStars,
   viewerCanDeleteContent,
 } from "./utils";
@@ -69,6 +70,7 @@ function FeedPostCard({
     post.author_username
   );
   const canOpenProfile = !!onOpenProfile && !!post.author_username;
+  const authorAvatarSrc = resolveProfileImageSrc(authorPfp, apiBaseUrl);
 
   function openAuthorProfile() {
     if (onOpenProfile && post.author_username) {
@@ -79,15 +81,28 @@ function FeedPostCard({
   return (
     <article className="feed-card">
       <header className="feed-card-header">
-      {authorPfp ? (
+        {canOpenProfile ? (
+          <button
+            className="feed-avatar-button"
+            type="button"
+            onClick={openAuthorProfile}
+            aria-label={`View ${username}'s profile`}
+          >
+            {authorAvatarSrc ? (
+              <img
+                src={authorAvatarSrc}
+                alt={`${username} profile`}
+                className="feed-avatar-image"
+              />
+            ) : (
+              <div className="feed-avatar">{getAvatarLetter(username)}</div>
+            )}
+          </button>
+        ) : authorAvatarSrc ? (
           <img
-            src={
-              authorPfp.startsWith('http')
-                ? authorPfp
-                : `${apiBaseUrl}${authorPfp}`
-            }
-            alt="Profile"
-            className="profile-circle-img"
+            src={authorAvatarSrc}
+            alt={`${username} profile`}
+            className="feed-avatar-image"
           />
         ) : (
           <div className="feed-avatar">{getAvatarLetter(username)}</div>
