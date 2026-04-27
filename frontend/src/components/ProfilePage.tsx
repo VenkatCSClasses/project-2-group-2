@@ -651,6 +651,8 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
                     viewerRole={(viewer?.role || '') as ViewerRole}
                     viewerUsername={viewer?.username || ''}
                     onOpenProfile={(username) => navigate(`/profile/${encodeURIComponent(username)}`)}
+       
+                    authorPfp={post.author_pfp_url}
                     onToggleComments={() => void toggleComments(post.id)}
                     onVote={(vote) => void handleVote(post.id, vote)}
                     onDeletePost={() => void handleDeletePost(post.id)}

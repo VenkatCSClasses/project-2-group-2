@@ -17,6 +17,7 @@ type FeedPostCardProps = {
   viewerRole: ViewerRole;
   viewerUsername: string;
   onOpenProfile?: (username: string) => void;
+  authorPfp?: string | null;
   onToggleComments: () => void;
   onVote: (vote: VoteSelection) => void;
   onDeletePost: () => void;
@@ -39,6 +40,7 @@ function FeedPostCard({
   viewerRole,
   viewerUsername,
   onOpenProfile,
+  authorPfp,
   onToggleComments,
   onVote,
   onDeletePost,
@@ -77,19 +79,19 @@ function FeedPostCard({
   return (
     <article className="feed-card">
       <header className="feed-card-header">
-        {canOpenProfile ? (
-          <button
-            className="feed-avatar-button"
-            type="button"
-            onClick={openAuthorProfile}
-            aria-label={`View ${username}'s profile`}
-          >
-            <div className="feed-avatar">{getAvatarLetter(username)}</div>
-          </button>
+      {authorPfp ? (
+          <img
+            src={
+              authorPfp.startsWith('http')
+                ? authorPfp
+                : `${apiBaseUrl}${authorPfp}`
+            }
+            alt="Profile"
+            className="profile-circle-img"
+          />
         ) : (
           <div className="feed-avatar">{getAvatarLetter(username)}</div>
         )}
-
         <div className="feed-card-heading">
           <div className="feed-user-meta">
             <div className="feed-user-row">

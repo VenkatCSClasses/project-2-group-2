@@ -685,6 +685,7 @@ function FeedPage({
                 viewerRole={currentUserRole}
                 viewerUsername={currentUsername}
                 onOpenProfile={(username) => onOpenProfile(username)}
+                authorPfp={post.author_pfp_url}
                 onToggleComments={() => void toggleComments(post.id)}
                 onVote={(upvote) => void handleVote(post.id, upvote)}
                 onDeletePost={() => void handleDeletePost(post.id)}

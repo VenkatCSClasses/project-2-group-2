@@ -28,14 +28,15 @@ type DiningHallReviewsPageProps = {
   onBack: () => void
 }
 
-type SortMode = 'highest' | 'lowest' | 'az'
+type SortMode = 'highest' | 'lowest'
+type ReviewSortMode = 'newest' | 'highest' | 'lowest'
 
 function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
   const navigate = useNavigate()
   const [selectedPlace, setSelectedPlace] = useState<PlaceKey>('campus')
   const [sortMode, setSortMode] = useState<SortMode>('highest')
   const [searchQuery, setSearchQuery] = useState('')
-
+  const [reviewSortMode, setReviewSortMode] = useState<ReviewSortMode>('newest')
   const [menuItems, setMenuItems] = useState<FoodItem[]>([])
   const [menuLoading, setMenuLoading] = useState(false)
   const [menuError, setMenuError] = useState('')
@@ -582,34 +583,48 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
 
   const sortedMenuItems = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
-
+    
     const filtered = menuItems.filter((item) => {
       const name = item.name?.toLowerCase() ?? ''
       const description = item.description?.toLowerCase() ?? ''
       return name.includes(query) || description.includes(query)
     })
-
+  
     const next = [...filtered]
-
+  
     if (sortMode === 'highest') {
       next.sort((a, b) => {
         const aRating = a.average_rating ?? -1
         const bRating = b.average_rating ?? -1
         return bRating - aRating || a.name.localeCompare(b.name)
       })
-    } else if (sortMode === 'lowest') {
+    } else {
       next.sort((a, b) => {
         const aRating = a.average_rating ?? Number.MAX_SAFE_INTEGER
         const bRating = b.average_rating ?? Number.MAX_SAFE_INTEGER
         return aRating - bRating || a.name.localeCompare(b.name)
       })
-    } else {
-      next.sort((a, b) => a.name.localeCompare(b.name))
     }
-
+  
     return next
   }, [menuItems, sortMode, searchQuery])
 
+  const sortedReviews = useMemo(() => {
+    const next = [...reviews]
+  
+    if (reviewSortMode === 'highest') {
+      next.sort((a, b) => b.star_rating - a.star_rating)
+    } else if (reviewSortMode === 'lowest') {
+      next.sort((a, b) => a.star_rating - b.star_rating)
+    } else {
+      next.sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+    }
+  
+    return next
+  }, [reviews, reviewSortMode])
   function renderReviewCards(emptyMessage: string) {
     return (
       <div className="dining-review-cards-scroll">
@@ -620,7 +635,7 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
           <p className="panel-status">{emptyMessage}</p>
         )}
 
-        {reviews.map((post) => {
+        {sortedReviews.map((post) => {
           const thread = getThread(post.id)
 
           return (
@@ -635,6 +650,7 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
               onOpenProfile={(username) =>
                 navigate(`/profile/${encodeURIComponent(username)}`)
               }
+              authorPfp={post.author_pfp_url}
               onToggleComments={() => void toggleComments(post.id)}
               onVote={(upvote) => void handleVote(post.id, upvote)}
               onDeletePost={() => void handleDeletePost(post.id)}
@@ -735,7 +751,6 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
             >
               <option value="highest">Highest stars</option>
               <option value="lowest">Lowest stars</option>
-              <option value="az">A–Z</option>
             </select>
           </div>
         </div>
@@ -814,6 +829,21 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
                         : 'All Terraces Reviews'}
                     </h2>
                   </div>
+                  <div className="review-sort-row">
+                    <label htmlFor="review-sort" className="sort-label">
+                      Reviews
+                    </label>
+                    <select
+                      id="review-sort"
+                      className="sort-select"
+                      value={reviewSortMode}
+                      onChange={(e) => setReviewSortMode(e.target.value as ReviewSortMode)}
+                    >
+                      <option value="newest">Newest</option>
+                      <option value="highest">Highest stars</option>
+                      <option value="lowest">Lowest stars</option>
+                    </select>
+                  </div>
                 </div>
 
                 {renderReviewCards('No reviews found for this dining hall.')}
@@ -821,23 +851,39 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
             ) : (
               <>
                 <div className="selected-item-header">
-                  <div>
-                    <h2 className="selected-item-title">{selectedItem.name}</h2>
-                    <p className="selected-item-rating">
-                      {typeof selectedItem.average_rating === 'number'
-                        ? `${(selectedItem.average_rating / 2).toFixed(1)}★ average`
-                        : 'No ratings yet'}
-                    </p>
-                  </div>
+              <div>
+                <h2 className="selected-item-title">{selectedItem.name}</h2>
+                <p className="selected-item-rating">
+                  {typeof selectedItem.average_rating === 'number'
+                    ? `${(selectedItem.average_rating / 2).toFixed(1)}★ average`
+                    : 'No ratings yet'}
+                </p>
+              </div>
 
-                  <button
-                    type="button"
-                    className="clear-selected-item-button"
-                    onClick={() => void loadAllPlaceReviews(selectedPlace)}
-                  >
-                    Show all reviews
-                  </button>
-                </div>
+              <button
+                type="button"
+                className="clear-selected-item-button"
+                onClick={() => void loadAllPlaceReviews(selectedPlace)}
+              >
+                Show all reviews
+              </button>
+
+              <div className="review-sort-row">
+                <label htmlFor="selected-review-sort" className="sort-label">
+                  Reviews
+                </label>
+                <select
+                  id="selected-review-sort"
+                  className="sort-select"
+                  value={reviewSortMode}
+                  onChange={(e) => setReviewSortMode(e.target.value as ReviewSortMode)}
+                >
+                  <option value="newest">Newest</option>
+                  <option value="highest">Highest stars</option>
+                  <option value="lowest">Lowest stars</option>
+                </select>
+              </div>
+            </div>
 
                 {renderReviewCards('No reviews for this item yet.')}
               </>
