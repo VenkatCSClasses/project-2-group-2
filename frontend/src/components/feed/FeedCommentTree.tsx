@@ -23,6 +23,7 @@ type FeedCommentTreeProps = {
   thread: ThreadState
   viewerRole: ViewerRole
   viewerUsername: string
+  onOpenProfile?: (username: string) => void
   collapsedById: CollapsedComments
   onToggleCollapse: (commentId: string, currentCollapsed: boolean) => void
   onReplyDraftChange: (commentId: string, value: string) => void
@@ -41,6 +42,7 @@ function FeedCommentTree({
   thread,
   viewerRole,
   viewerUsername,
+  onOpenProfile,
   collapsedById,
   onToggleCollapse,
   onReplyDraftChange,
@@ -111,6 +113,13 @@ function FeedCommentTree({
           viewerUsername,
           comment.author_username
         )
+        const canOpenProfile = !!onOpenProfile && !!comment.author_username
+
+        function openCommentAuthorProfile() {
+          if (onOpenProfile && comment.author_username) {
+            onOpenProfile(comment.author_username)
+          }
+        }
 
         return (
           <div
@@ -118,14 +127,37 @@ function FeedCommentTree({
             className={`feed-comment ${parentId ? 'feed-comment-reply' : ''}`}
           >
             <article className="feed-comment-node">
-              <div className="feed-comment-avatar">
-                {getAvatarLetter(comment.author_username)}
-              </div>
+              {canOpenProfile ? (
+                <button
+                  className="feed-comment-avatar-button"
+                  type="button"
+                  onClick={openCommentAuthorProfile}
+                  aria-label={`View ${username}'s profile`}
+                >
+                  <div className="feed-comment-avatar">
+                    {getAvatarLetter(comment.author_username)}
+                  </div>
+                </button>
+              ) : (
+                <div className="feed-comment-avatar">
+                  {getAvatarLetter(comment.author_username)}
+                </div>
+              )}
 
               <div className="feed-comment-main">
                 <div className="feed-comment-topline">
                   <div className="feed-comment-author-row">
-                    <span className="feed-comment-username">{username}</span>
+                    {canOpenProfile ? (
+                      <button
+                        className="feed-comment-username-button"
+                        type="button"
+                        onClick={openCommentAuthorProfile}
+                      >
+                        <span className="feed-comment-username">{username}</span>
+                      </button>
+                    ) : (
+                      <span className="feed-comment-username">{username}</span>
+                    )}
                     <span className="feed-meta-separator" aria-hidden="true">
                       •
                     </span>
@@ -282,6 +314,7 @@ function FeedCommentTree({
                       thread={thread}
                       viewerRole={viewerRole}
                       viewerUsername={viewerUsername}
+                      onOpenProfile={onOpenProfile}
                       collapsedById={collapsedById}
                       onToggleCollapse={onToggleCollapse}
                       onReplyDraftChange={onReplyDraftChange}

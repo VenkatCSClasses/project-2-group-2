@@ -82,14 +82,14 @@ function App() {
                   setUploadSelection(selection)
                   navigate('/upload')
                 }}
-                onOpenProfile={() => navigate('/profile')}
+                onOpenProfile={(username) => navigate(`/profile/${encodeURIComponent(username)}`)}
                 onOpenDiningReviews={() => navigate('/dining-reviews')}
                 onOpenReportedPosts={() => navigate('/reported-posts')}
               />
             }
           />
           <Route
-            path="/profile"
+            path="/profile/:username"
             element={<ProfilePage token={token} onBack={() => navigate('/feed')} />}
           />
           <Route

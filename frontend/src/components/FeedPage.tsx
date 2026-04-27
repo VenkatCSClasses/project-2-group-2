@@ -635,7 +635,13 @@ function FeedPage({
 
           <div className="feed-topbar-title">Feed</div>
 
-          <ProfileDropdown currentUserPfp={currentUserPfp} username={currentUsername} onOpenProfile={onOpenProfile} onOpenReportedPosts={onOpenReportedPosts} token={token} />
+          <ProfileDropdown
+            currentUserPfp={currentUserPfp}
+            username={currentUsername}
+            onOpenProfile={onOpenProfile}
+            onOpenReportedPosts={onOpenReportedPosts}
+            token={token}
+          />
           <button
             className="filter-button"
             type="button"
@@ -678,6 +684,7 @@ function FeedPage({
                 commentCount={post.comment_count ?? 0}
                 viewerRole={currentUserRole}
                 viewerUsername={currentUsername}
+                onOpenProfile={(username) => onOpenProfile(username)}
                 authorPfp={post.author_pfp_url}
                 onToggleComments={() => void toggleComments(post.id)}
                 onVote={(upvote) => void handleVote(post.id, upvote)}

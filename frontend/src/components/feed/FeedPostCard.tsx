@@ -16,6 +16,7 @@ type FeedPostCardProps = {
   commentCount: number;
   viewerRole: ViewerRole;
   viewerUsername: string;
+  onOpenProfile?: (username: string) => void;
   authorPfp?: string | null;
   onToggleComments: () => void;
   onVote: (vote: VoteSelection) => void;
@@ -38,6 +39,7 @@ function FeedPostCard({
   commentCount,
   viewerRole,
   viewerUsername,
+  onOpenProfile,
   authorPfp,
   onToggleComments,
   onVote,
@@ -66,6 +68,13 @@ function FeedPostCard({
     viewerUsername,
     post.author_username
   );
+  const canOpenProfile = !!onOpenProfile && !!post.author_username;
+
+  function openAuthorProfile() {
+    if (onOpenProfile && post.author_username) {
+      onOpenProfile(post.author_username);
+    }
+  }
 
   return (
     <article className="feed-card">
@@ -86,7 +95,17 @@ function FeedPostCard({
         <div className="feed-card-heading">
           <div className="feed-user-meta">
             <div className="feed-user-row">
-              <span className="feed-username">{username}</span>
+              {canOpenProfile ? (
+                <button
+                  className="feed-username-button"
+                  type="button"
+                  onClick={openAuthorProfile}
+                >
+                  <span className="feed-username">{username}</span>
+                </button>
+              ) : (
+                <span className="feed-username">{username}</span>
+              )}
               <span className="feed-meta-separator" aria-hidden="true">
                 •
               </span>
@@ -212,6 +231,7 @@ function FeedPostCard({
             thread={thread}
             viewerRole={viewerRole}
             viewerUsername={viewerUsername}
+            onOpenProfile={onOpenProfile}
             onDraftChange={onDraftChange}
             onReplyDraftChange={onReplyDraftChange}
             onReplyToggle={onReplyToggle}

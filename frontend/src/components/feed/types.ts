@@ -7,7 +7,7 @@ export type UploadSelection = {
 export type FeedPageProps = {
   token: string
   onOpenUpload: (selection: UploadSelection) => void
-  onOpenProfile: () => void
+  onOpenProfile: (username: string) => void
   onOpenDiningReviews: () => void
   onOpenReportedPosts: () => void
 }
