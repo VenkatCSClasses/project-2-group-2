@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, Flame, Clock } from 'lucide-react'
 import FeedPostCard from './feed/FeedPostCard'
 import ProfileDropdown from './ProfileDropdown'
 import { collectCommentSubtreeIds } from './feed/commentThread'
@@ -13,7 +13,7 @@ import type {
   PostsResponse,
   ThreadState,
   VoteSelection,
-  ViewerRole,
+  ViewerRole
 } from './feed/types'
 import { createInitialThreadState } from './feed/utils'
 import './FeedPage.css'
@@ -39,7 +39,7 @@ function FeedPage({
   )
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
-  
+  const [filterMode, setFilterMode] = useState<'latest' | 'top'>('latest')
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [selectedPlace, setSelectedPlace] = useState<PlaceKey>('campus')
   const [menuItems, setMenuItems] = useState<FoodItem[]>([])
@@ -598,11 +598,23 @@ function FeedPage({
   }
 
   const visiblePosts = useMemo(() => {
-    return [...posts].sort(
+    const next = [...posts]
+  
+    if (filterMode === 'top') {
+      next.sort((a, b) => {
+        const scoreA = a.upvotes - a.downvotes
+        const scoreB = b.upvotes - b.downvotes
+        return scoreB - scoreA
+      })
+      return next
+    }
+  
+    next.sort(
       (a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     )
-  }, [posts])
+    return next
+  }, [posts, filterMode])
 
   return (
     <>
@@ -624,6 +636,27 @@ function FeedPage({
           <div className="feed-topbar-title">Feed</div>
 
           <ProfileDropdown currentUserPfp={currentUserPfp} username={currentUsername} onOpenProfile={onOpenProfile} onOpenReportedPosts={onOpenReportedPosts} token={token} />
+          <button
+            className="filter-button"
+            type="button"
+            onClick={() =>
+              setFilterMode((current) =>
+                current === 'latest' ? 'top' : 'latest'
+              )
+            }
+          >
+            {filterMode === 'latest' ? (
+              <>
+                <Clock size={18} />
+                <span>Latest</span>
+              </>
+            ) : (
+              <>
+                <Flame size={18} />
+                <span>Top</span>
+              </>
+            )}
+          </button>
         </header>
 
         <main className="feed-list">
