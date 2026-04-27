@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import or_
 from sqlmodel import Session
-
+from app.models import Comment, FoodItem, FoodPlace, Report, Review, User
 from app.database import get_db
 from app.models import Comment, FoodItem, Report, Review, User
 from app.routes.helpers import get_or_404, parse_uuid, strip
@@ -17,23 +17,40 @@ router = APIRouter()
 async def get_posts(
     start: int = 0,
     limit: int = 10,
+    place: str | None = None,
     current_user: dict | None = Depends(get_optional_current_user),
     db: Session = Depends(get_db),
 ):
-    """
-    Get a list of posts.
+    if limit > 100:
+        limit = 100
+    if limit < 1:
+        limit = 10
+    if start < 0:
+        start = 0
 
-    This endpoint retrieves a list of posts with pagination.
+    posts_query = db.query(Review)
 
-    - **start**: The starting index for pagination (default is 0).
-    - **limit**: The maximum number of posts to return (default is 10).
-    """
-    posts = db.query(Review).order_by(Review.created_at.desc()).offset(start).limit(limit).all()
+    if place:
+        posts_query = (
+            posts_query
+            .join(FoodItem, Review.food_item_id == FoodItem.id)
+            .join(FoodPlace, FoodItem.food_place_id == FoodPlace.id)
+            .filter(FoodPlace.name == place)
+        )
+
+    posts = (
+        posts_query
+        .order_by(Review.created_at.desc())
+        .offset(start)
+        .limit(limit)
+        .all()
+    )
+
     viewer_user_id = parse_uuid(current_user["user_id"]) if current_user else None
     results = serialize_reviews(db, posts, viewer_user_id=viewer_user_id)
+
     return {"start": start, "limit": limit, "posts": results}
-
-
+    
 @router.post("/create")
 async def create_post(form: ReviewForm = Depends(), item_id: str = "", current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """

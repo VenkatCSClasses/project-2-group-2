@@ -9,7 +9,7 @@ from app.database import get_db
 from sqlmodel import Session
 from app.models import FoodItem, FoodPlace, Review, User
 from uuid import UUID
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from app.serde import serialize_reviews
 from app.routes.helpers import get_or_404, parse_uuid
 from app.utils import get_current_user, get_current_admin, get_optional_current_user, process_and_save_image
@@ -114,13 +114,7 @@ async def create_item(item: FoodItemCreateForm = Depends(), db: Session = Depend
 async def get_all_unique_items_by_place(
     place_name: str,
     db: Session = Depends(get_db),
-    ):
-    """
-    Get all unique historical food items for a dining hall.
-
-    This returns one item per food name.
-    """
-
+):
     place = db.query(FoodPlace).filter(FoodPlace.name == place_name).first()
 
     if not place:
@@ -138,8 +132,30 @@ async def get_all_unique_items_by_place(
     for item in all_items:
         key = item.name.strip().lower()
 
-        if key not in unique_items_by_name:
-            unique_items_by_name[key] = item
+        if key in unique_items_by_name:
+            continue
+
+        matching_item_ids = [
+            other.id
+            for other in all_items
+            if other.name.strip().lower() == key
+        ]
+
+        avg_rating = (
+            db.query(func.avg(Review.star_rating))
+            .filter(Review.food_item_id.in_(matching_item_ids))
+            .scalar()
+        )
+
+        unique_items_by_name[key] = {
+            "id": str(item.id),
+            "name": item.name,
+            "description": item.description,
+            "image_url": item.image_url,
+            "food_place_id": str(item.food_place_id) if item.food_place_id else None,
+            "menu_date": str(item.menu_date),
+            "average_rating": round(float(avg_rating), 1) if avg_rating is not None else None,
+        }
 
     unique_items = list(unique_items_by_name.values())
 
@@ -254,9 +270,22 @@ async def get_item_reviews(
     item_id = parse_uuid(item_id)
     item = get_or_404(db, FoodItem, item_id)
 
+    matching_item_ids = [item.id]
+
+    if item.food_place_id:
+        matching_item_ids = [
+            matching.id
+            for matching in db.query(FoodItem)
+            .filter(
+                FoodItem.food_place_id == item.food_place_id,
+                func.lower(FoodItem.name) == item.name.strip().lower(),
+            )
+            .all()
+        ]
+
     reviews = (
         db.query(Review)
-        .filter(Review.food_item_id == item.id)
+        .filter(Review.food_item_id.in_(matching_item_ids))
         .order_by(Review.created_at.desc())
         .offset(start)
         .limit(limit)
