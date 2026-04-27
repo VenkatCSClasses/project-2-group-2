@@ -58,13 +58,17 @@
   width: 120px;
   height: 120px;
   border-radius: 50%;
-  cursor: pointer;
+  cursor: default;
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   background: #f3f3f3;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.profile-picture-wrapper.is-editable {
+  cursor: pointer;
 }
 
 .profile-img-large {
@@ -94,7 +98,7 @@
   transition: opacity 0.2s;
 }
 
-.profile-picture-wrapper:hover .profile-picture-overlay {
+.profile-picture-wrapper.is-editable:hover .profile-picture-overlay {
   opacity: 1;
 }
 

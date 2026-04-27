@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import FeedPostCard from './feed/FeedPostCard'
 import { collectCommentSubtreeIds } from './feed/commentThread'
 import type {
@@ -30,6 +31,7 @@ type DiningHallReviewsPageProps = {
 type SortMode = 'highest' | 'lowest' | 'az'
 
 function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
+  const navigate = useNavigate()
   const [selectedPlace, setSelectedPlace] = useState<PlaceKey>('campus')
   const [sortMode, setSortMode] = useState<SortMode>('highest')
   const [searchQuery, setSearchQuery] = useState('')
@@ -630,6 +632,9 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
               commentCount={post.comment_count ?? 0}
               viewerRole={currentUserRole}
               viewerUsername={currentUsername}
+              onOpenProfile={(username) =>
+                navigate(`/profile/${encodeURIComponent(username)}`)
+              }
               onToggleComments={() => void toggleComments(post.id)}
               onVote={(upvote) => void handleVote(post.id, upvote)}
               onDeletePost={() => void handleDeletePost(post.id)}

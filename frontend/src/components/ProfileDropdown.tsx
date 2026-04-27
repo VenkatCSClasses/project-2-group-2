@@ -16,7 +16,7 @@ interface TokenInfo {
 interface ProfileDropdownProps {
   currentUserPfp: string | null
   username: string
-  onOpenProfile: () => void
+  onOpenProfile: (username: string) => void
   onOpenReportedPosts?: () => void
   token: string
 }
@@ -54,7 +54,9 @@ export default function ProfileDropdown({ currentUserPfp, username, onOpenProfil
           <button className="profile-dropdown-item" type="button"
             onClick={() => {
               setIsProfileMenuOpen(false)
-              onOpenProfile()
+              if (username) {
+                onOpenProfile(username)
+              }
             }}
           >
             Profile

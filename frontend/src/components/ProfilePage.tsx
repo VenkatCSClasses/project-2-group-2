@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Pencil } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 import { getCroppedImg } from '../utils/cropImage';
@@ -10,7 +11,6 @@ import type { Post, ThreadState, VoteSelection, ViewerRole } from './feed/types'
 import { createInitialThreadState } from './feed/utils';
 import { collectCommentSubtreeIds } from './feed/commentThread';
 
-
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 type ProfilePageProps = {
@@ -20,7 +20,7 @@ type ProfilePageProps = {
 
 type UserProfile = {
   username: string;
-  email: string;
+  email: string | null;
   profile_picture?: string;
   role?: string;
 };
@@ -32,22 +32,33 @@ interface Area {
   y: number;
 }
 
+function toUserProfile(data: any): UserProfile {
+  return {
+    username: data.username,
+    email: data.account_info?.email ?? null,
+    profile_picture: data.account_info?.profile_picture,
+    role: data.account_info?.role,
+  };
+}
+
 function ProfilePage({ token, onBack }: ProfilePageProps) {
+  const navigate = useNavigate();
+  const { username: routeUsername } = useParams<{ username: string }>();
+
+  const [viewer, setViewer] = useState<UserProfile | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Posts specific state
   const [posts, setPosts] = useState<Post[]>([]);
   const [threadStates, setThreadStates] = useState<Record<string, ThreadState>>({});
   const [postsLoading, setPostsLoading] = useState(false);
 
   const [message, setMessage] = useState('');
-  
+
   const [editField, setEditField] = useState<'none' | 'username' | 'email' | 'password'>('none');
   const [editValue, setEditValue] = useState('');
-  const [currentPassword, setCurrentPassword] = useState(''); // Only used for change password
+  const [currentPassword, setCurrentPassword] = useState('');
 
-  // PFP Cropping state
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -55,64 +66,96 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
   const [isUploadingPfp, setIsUploadingPfp] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const isOwnProfile = !!viewer && !!profile && viewer.username === profile.username;
+
   const fetchProfile = async () => {
     setLoading(true);
+    setMessage('');
+
     try {
-      const response = await fetch(`${API_BASE_URL}/accounts/me`, {
+      const meResponse = await fetch(`${API_BASE_URL}/accounts/me`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      const data = await response.json();
-      if (!response.ok) {
+      const meData = await meResponse.json();
+
+      if (!meResponse.ok) {
         setMessage('Failed to load profile');
         return;
       }
-      setProfile({
-        username: data.username,
-        email: data.account_info.email,
-        profile_picture: data.account_info.profile_picture,
-        role: data.account_info.role,
-      });
-    } catch (err) {
-      console.error(err);
+
+      const meProfile = toUserProfile(meData);
+      setViewer(meProfile);
+
+      const usernameToView = routeUsername || meProfile.username;
+
+      if (usernameToView === meProfile.username) {
+        setProfile(meProfile);
+        return;
+      }
+
+      const userResponse = await fetch(
+        `${API_BASE_URL}/accounts/${encodeURIComponent(usernameToView)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const userData = await userResponse.json();
+
+      if (!userResponse.ok) {
+        setMessage(userData?.detail || 'Profile not found');
+        setProfile(null);
+        return;
+      }
+
+      setProfile(toUserProfile(userData));
+    } catch (error) {
+      console.error(error);
       setMessage('Network error loading profile');
+      setProfile(null);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchProfile();
-  }, [token]);
+    void fetchProfile();
+  }, [token, routeUsername]);
 
-
-  const loadUserPosts = async () => {
+  const loadUserPosts = async (username: string) => {
     setPostsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/accounts/me/posts`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/accounts/${encodeURIComponent(username)}/posts?start=0&limit=100`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       const data = await response.json();
-      if (response.ok) {
-        setPosts(data.posts || []);
+      if (!response.ok) {
+        setPosts([]);
+        return;
       }
+      setPosts(data.posts || []);
     } catch (error) {
       console.error(error);
+      setPosts([]);
     } finally {
       setPostsLoading(false);
     }
   };
 
   useEffect(() => {
-    if (profile) {
-      loadUserPosts();
+    if (profile?.username) {
+      void loadUserPosts(profile.username);
     }
-  }, [profile]);
+  }, [profile?.username, token]);
 
-  // Replicated Feed logic for standard interactions
   function updateThreadState(postId: string, updater: (current: ThreadState) => ThreadState) {
     setThreadStates((current) => ({
       ...current,
@@ -144,7 +187,7 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
       const comments = data.comments ?? [];
       updateThreadState(postId, (c) => ({ ...c, loading: false, loaded: true, comments, error: '' }));
       updatePostCommentCount(postId, data.count ?? comments.length);
-    } catch (err) {
+    } catch {
       updateThreadState(postId, (c) => ({ ...c, loading: false, error: 'Error loading' }));
     }
   }
@@ -171,11 +214,13 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
         const data = await response.json();
         setPosts((current) =>
           current.map((p) =>
-            p.id === postId ? { ...p, upvotes: data.upvotes, downvotes: data.downvotes, viewer_vote: data.viewer_vote } : p
+            p.id === postId
+              ? { ...p, upvotes: data.upvotes, downvotes: data.downvotes, viewer_vote: data.viewer_vote }
+              : p
           )
         );
       }
-    } catch (e) {}
+    } catch {}
   }
 
   async function handleCommentVote(postId: string, commentId: string, vote: VoteSelection) {
@@ -190,11 +235,13 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
         updateThreadState(postId, (c) => ({
           ...c,
           comments: c.comments.map((cm) =>
-            cm.id === commentId ? { ...cm, upvotes: data.upvotes, downvotes: data.downvotes, viewer_vote: data.viewer_vote } : cm
+            cm.id === commentId
+              ? { ...cm, upvotes: data.upvotes, downvotes: data.downvotes, viewer_vote: data.viewer_vote }
+              : cm
           ),
         }));
       }
-    } catch (e) {}
+    } catch {}
   }
 
   async function handleDeletePost(postId: string) {
@@ -206,7 +253,7 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
       if (response.ok) {
         setPosts((current) => current.filter((p) => p.id !== postId));
       }
-    } catch (e) {}
+    } catch {}
   }
 
   async function handleReportPost(postId: string) {
@@ -216,7 +263,7 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
         headers: { Authorization: `Bearer ${token}` },
       });
       alert('Post reported successfully');
-    } catch (e) {}
+    } catch {}
   }
 
   async function handleDeleteComment(postId: string, commentId: string) {
@@ -233,7 +280,7 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
         });
         updatePostCommentCount(postId, Math.max(0, getThread(postId).comments.length - 1));
       }
-    } catch (e) {}
+    } catch {}
   }
 
   async function handleReportComment(_postId: string, commentId: string) {
@@ -243,7 +290,7 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
         headers: { Authorization: `Bearer ${token}` },
       });
       alert('Comment reported');
-    } catch (e) {}
+    } catch {}
   }
 
   async function submitComment(postId: string, parentId?: string) {
@@ -282,17 +329,18 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
         replyTargetId: parentId ? null : c.replyTargetId,
       }));
       updatePostCommentCount(postId, getThread(postId).comments.length + 1);
-    } catch (e) {
+    } catch {
       updateThreadState(postId, (c) => ({ ...c, submitting: false, submittingReplyId: null, error: 'Error posting' }));
     }
   }
 
-
   const handleEditClick = (field: 'username' | 'email' | 'password') => {
+    if (!isOwnProfile) return;
+
     setEditField(field);
     setCurrentPassword('');
     if (field === 'username' && profile) setEditValue(profile.username);
-    else if (field === 'email' && profile) setEditValue(profile.email);
+    else if (field === 'email' && profile) setEditValue(profile.email || '');
     else setEditValue('');
   };
 
@@ -305,11 +353,13 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
 
   const handleSubmitEdit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isOwnProfile || !profile) return;
+
     setMessage('');
-    
+
     let url = '';
-    let body: any = null;
-    let bodyType = 'url';
+    let body: URLSearchParams | null = null;
+    let bodyType: 'url' | 'empty' = 'url';
 
     if (editField === 'username') {
       url = `${API_BASE_URL}/auth/change-username?new_username=${encodeURIComponent(editValue)}`;
@@ -320,9 +370,9 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
     } else if (editField === 'password') {
       url = `${API_BASE_URL}/auth/change-password`;
       body = new URLSearchParams({
-        username: profile?.username || '',
+        username: profile.username,
         current_password: currentPassword,
-        new_password: editValue
+        new_password: editValue,
       });
     }
 
@@ -333,9 +383,12 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
           Authorization: `Bearer ${token}`,
         },
       };
-      
+
       if (bodyType === 'url') {
-        options.headers = { ...options.headers, 'Content-Type': 'application/x-www-form-urlencoded' };
+        options.headers = {
+          ...options.headers,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        };
         options.body = body;
       }
 
@@ -349,14 +402,21 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
 
       setMessage(data.message || 'Updated successfully');
       setEditField('none');
-      fetchProfile(); 
-    } catch (err) {
-      console.error(err);
+
+      if (editField === 'username') {
+        navigate(`/profile/${encodeURIComponent(editValue)}`, { replace: true });
+      } else {
+        void fetchProfile();
+      }
+    } catch (error) {
+      console.error(error);
       setMessage('Network error');
     }
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (!isOwnProfile) return;
+
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
       const reader = new FileReader();
@@ -368,7 +428,7 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
   };
 
   const handleSavePfp = async () => {
-    if (!uploadedImage || !croppedAreaPixels) return;
+    if (!isOwnProfile || !uploadedImage || !croppedAreaPixels) return;
     setIsUploadingPfp(true);
     setMessage('');
 
@@ -390,13 +450,13 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
       const data = await response.json();
 
       if (!response.ok) {
-        setMessage(data?.detail || data?.message || 'PFP Update failed');
+        setMessage(data?.detail || data?.message || 'PFP update failed');
       } else {
         setUploadedImage(null);
-        fetchProfile();
+        void fetchProfile();
       }
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error(error);
       setMessage('Network error during picture upload');
     } finally {
       setIsUploadingPfp(false);
@@ -408,10 +468,15 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
   }
 
   if (!profile) {
-    return <div className="profile-page"><p>Error loading profile.</p><button onClick={onBack}>Go Back</button></div>;
+    return (
+      <div className="profile-page">
+        <p>{message || 'Error loading profile.'}</p>
+        <button onClick={onBack}>Go Back</button>
+      </div>
+    );
   }
 
-  const pfpSrc = profile.profile_picture 
+  const pfpSrc = profile.profile_picture
     ? (profile.profile_picture.startsWith('http') ? profile.profile_picture : `${API_BASE_URL}${profile.profile_picture}`)
     : '';
 
@@ -421,30 +486,35 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
         <button className="back-button" onClick={onBack}>
           <ArrowLeft size={20} /> Back
         </button>
-        <h2>Your Profile</h2>
-        <div style={{ width: '60px' }}></div>{/* Spacer for center alignment */}
+        <h2>{isOwnProfile ? 'My Profile' : `${profile.username}'s Profile`}</h2>
+        <div style={{ width: '60px' }}></div>
       </div>
 
       <div className="profile-content">
         <div className="profile-picture-section">
-          <div className="profile-picture-wrapper" onClick={() => fileInputRef.current?.click()}>
+          <div
+            className={`profile-picture-wrapper ${isOwnProfile ? 'is-editable' : ''}`}
+            onClick={isOwnProfile ? () => fileInputRef.current?.click() : undefined}
+          >
             {pfpSrc ? (
               <img src={pfpSrc} alt="Profile" className="profile-img-large" />
             ) : (
               <div className="profile-placeholder-large">{profile.username[0]?.toUpperCase()}</div>
             )}
-            <div className="profile-picture-overlay">Change</div>
+            {isOwnProfile && <div className="profile-picture-overlay">Change</div>}
           </div>
-          <input 
-            type="file" 
-            accept="image/*" 
-            ref={fileInputRef}
-            onChange={handleFileChange} 
-            style={{ display: 'none' }} 
-          />
+          {isOwnProfile && (
+            <input
+              type="file"
+              accept="image/*"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              style={{ display: 'none' }}
+            />
+          )}
         </div>
 
-        {uploadedImage && (
+        {isOwnProfile && uploadedImage && (
           <div className="pfp-cropper-modal">
             <div className="pfp-cropper-content">
               <h3>Crop Picture</h3>
@@ -474,10 +544,10 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
         {message && <p className="profile-msg">{message}</p>}
 
         <div className="profile-fields">
-          {editField !== 'none' ? (
+          {isOwnProfile && editField !== 'none' ? (
             <form className="profile-edit-form" onSubmit={handleSubmitEdit}>
               <h3>Change {editField.charAt(0).toUpperCase() + editField.slice(1)}</h3>
-              
+
               {editField === 'password' && (
                 <input
                   type="password"
@@ -487,13 +557,15 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
                   onChange={(e) => setCurrentPassword(e.target.value)}
                 />
               )}
-              
+
               <input
                 type={editField === 'email' ? 'email' : editField === 'password' ? 'password' : 'text'}
                 placeholder={
-                  editField === 'username' ? `Example: ${profile.username || 'new_username'}` : 
-                  editField === 'email' ? `Example: ${profile.email || 'new@email.com'}` : 
-                  'Enter new password'
+                  editField === 'username'
+                    ? `Example: ${profile.username || 'new_username'}`
+                    : editField === 'email'
+                      ? `Example: ${profile.email || 'new@email.com'}`
+                      : 'Enter new password'
                 }
                 required
                 value={editValue}
@@ -511,26 +583,38 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
                 <div className="profile-label">Username</div>
                 <div className="profile-val">
                   <span>{profile.username}</span>
-                  <button className="edit-icon-btn" aria-label="Edit username" onClick={() => handleEditClick('username')}><Pencil size={16} /></button>
-                </div>
-              </div>
-              
-              <div className="profile-row">
-                <div className="profile-label">Email</div>
-                <div className="profile-val">
-                  <span>{profile.email}</span>
-                  <button className="edit-icon-btn" aria-label="Edit email" onClick={() => handleEditClick('email')}><Pencil size={16} /></button>
+                  {isOwnProfile && (
+                    <button className="edit-icon-btn" aria-label="Edit username" onClick={() => handleEditClick('username')}>
+                      <Pencil size={16} />
+                    </button>
+                  )}
                 </div>
               </div>
 
-              <div className="profile-row">
-                <div className="profile-label">Password</div>
-                <div className="profile-val">
-                  <span>••••••••</span>
-                  <button className="edit-icon-btn" aria-label="Edit password" onClick={() => handleEditClick('password')}><Pencil size={16} /></button>
+              {isOwnProfile && (
+                <div className="profile-row">
+                  <div className="profile-label">Email</div>
+                  <div className="profile-val">
+                    <span>{profile.email}</span>
+                    <button className="edit-icon-btn" aria-label="Edit email" onClick={() => handleEditClick('email')}>
+                      <Pencil size={16} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-              
+              )}
+
+              {isOwnProfile && (
+                <div className="profile-row">
+                  <div className="profile-label">Password</div>
+                  <div className="profile-val">
+                    <span>••••••••</span>
+                    <button className="edit-icon-btn" aria-label="Edit password" onClick={() => handleEditClick('password')}>
+                      <Pencil size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="profile-row">
                 <div className="profile-label">Role</div>
                 <div className="profile-val">
@@ -542,11 +626,17 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
         </div>
 
         <div className="profile-reviews-section">
-          <h3>Past Reviews</h3>
+          <h3>{isOwnProfile ? 'Past Reviews' : `${profile.username}'s Reviews`}</h3>
           {postsLoading ? (
             <div className="reviews-placeholder"><p>Loading posts...</p></div>
           ) : posts.length === 0 ? (
-            <div className="reviews-placeholder"><p>You haven't posted any reviews yet.</p></div>
+            <div className="reviews-placeholder">
+              <p>
+                {isOwnProfile
+                  ? "You haven't posted any reviews yet."
+                  : `${profile.username} hasn't posted any reviews yet.`}
+              </p>
+            </div>
           ) : (
             <div className="feed-posts">
               {posts.map((post) => {
@@ -558,15 +648,20 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
                     apiBaseUrl={API_BASE_URL}
                     thread={thread}
                     commentCount={post.comment_count ?? 0}
-                    viewerRole={profile?.role as ViewerRole}
-                    viewerUsername={profile?.username || ''}
+                    viewerRole={(viewer?.role || '') as ViewerRole}
+                    viewerUsername={viewer?.username || ''}
+                    onOpenProfile={(username) => navigate(`/profile/${encodeURIComponent(username)}`)}
                     onToggleComments={() => void toggleComments(post.id)}
                     onVote={(vote) => void handleVote(post.id, vote)}
                     onDeletePost={() => void handleDeletePost(post.id)}
                     onReportPost={() => void handleReportPost(post.id)}
                     onDraftChange={(val) => updateThreadState(post.id, (c) => ({ ...c, draft: val }))}
-                    onReplyDraftChange={(cmtId, val) => updateThreadState(post.id, (c) => ({ ...c, replyDrafts: { ...c.replyDrafts, [cmtId]: val } }))}
-                    onReplyToggle={(cmtId) => updateThreadState(post.id, (c) => ({ ...c, replyTargetId: c.replyTargetId === cmtId ? null : cmtId }))}
+                    onReplyDraftChange={(cmtId, val) =>
+                      updateThreadState(post.id, (c) => ({ ...c, replyDrafts: { ...c.replyDrafts, [cmtId]: val } }))
+                    }
+                    onReplyToggle={(cmtId) =>
+                      updateThreadState(post.id, (c) => ({ ...c, replyTargetId: c.replyTargetId === cmtId ? null : cmtId }))
+                    }
                     onCloseReply={() => updateThreadState(post.id, (c) => ({ ...c, replyTargetId: null }))}
                     onSubmitComment={(parentId) => void submitComment(post.id, parentId)}
                     onCommentVote={(cmtId, vote) => void handleCommentVote(post.id, cmtId, vote)}
@@ -577,9 +672,7 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
               })}
             </div>
           )}
-
         </div>
-
       </div>
     </main>
   );
