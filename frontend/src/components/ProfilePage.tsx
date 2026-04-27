@@ -560,6 +560,7 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
                     commentCount={post.comment_count ?? 0}
                     viewerRole={profile?.role as ViewerRole}
                     viewerUsername={profile?.username || ''}
+                    authorPfp={post.author_pfp_url}
                     onToggleComments={() => void toggleComments(post.id)}
                     onVote={(vote) => void handleVote(post.id, vote)}
                     onDeletePost={() => void handleDeletePost(post.id)}

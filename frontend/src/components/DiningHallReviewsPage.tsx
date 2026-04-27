@@ -630,6 +630,7 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
               commentCount={post.comment_count ?? 0}
               viewerRole={currentUserRole}
               viewerUsername={currentUsername}
+              authorPfp={post.author_pfp_url}
               onToggleComments={() => void toggleComments(post.id)}
               onVote={(upvote) => void handleVote(post.id, upvote)}
               onDeletePost={() => void handleDeletePost(post.id)}
