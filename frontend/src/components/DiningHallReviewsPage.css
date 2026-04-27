@@ -359,3 +359,49 @@
     width: 100%;
   }
 }
+.show-more-items-button {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  background: white;
+  color: #111827;
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.show-more-items-button:hover {
+  background: #f9fafb;
+}
+
+.review-sort-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+@media (max-width: 640px) {
+  .review-sort-row {
+    width: 100%;
+    margin-left: 0;
+    justify-content: space-between;
+  }
+}
+.dining-items-panel {
+  padding: 20px;
+  height: 74vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dining-items-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
