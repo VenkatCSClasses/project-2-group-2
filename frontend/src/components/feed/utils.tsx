@@ -64,6 +64,29 @@ export function getAvatarLetter(username: string | null): string {
   return (username || "user").charAt(0).toUpperCase();
 }
 
+export function resolveProfileImageSrc(
+  profileImageUrl: string | null | undefined,
+  apiBaseUrl: string
+): string | null {
+  if (!profileImageUrl) {
+    return null;
+  }
+
+  if (
+    profileImageUrl.startsWith("http://") ||
+    profileImageUrl.startsWith("https://") ||
+    profileImageUrl.startsWith("data:")
+  ) {
+    return profileImageUrl;
+  }
+
+  if (profileImageUrl.startsWith("/")) {
+    return `${apiBaseUrl}${profileImageUrl}`;
+  }
+
+  return `${apiBaseUrl}/${profileImageUrl}`;
+}
+
 export function viewerCanModerate(viewerRole: ViewerRole): boolean {
   return viewerRole === "moderator" || viewerRole === "admin";
 }

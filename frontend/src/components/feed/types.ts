@@ -46,6 +46,7 @@ export type ReportedPost = {
   id: string
   author_id: string
   author_username: string | null
+  author_pfp_url: string | null
   food_item_id: string | null
   food_item_name: string | null
   star_rating: number
@@ -66,6 +67,7 @@ export type Comment = {
   text: string
   author_id: string
   author_username: string | null
+  author_pfp_url: string | null
   review_id: string
   parent_id: string | null
   created_at: string

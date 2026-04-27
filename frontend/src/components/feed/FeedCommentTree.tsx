@@ -14,7 +14,9 @@ import {
   type CommentThreadIndex,
 } from './commentThread'
 import type { ThreadState, ViewerRole, VoteSelection } from './types'
-import { formatTimeAgo, getAvatarLetter } from './utils'
+import { formatTimeAgo, getAvatarLetter, resolveProfileImageSrc } from './utils'
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
 type FeedCommentTreeProps = {
   threadIndex: CommentThreadIndex
@@ -114,6 +116,10 @@ function FeedCommentTree({
           comment.author_username
         )
         const canOpenProfile = !!onOpenProfile && !!comment.author_username
+        const commentAvatarSrc = resolveProfileImageSrc(
+          comment.author_pfp_url,
+          API_BASE_URL
+        )
 
         function openCommentAuthorProfile() {
           if (onOpenProfile && comment.author_username) {
@@ -134,14 +140,30 @@ function FeedCommentTree({
                   onClick={openCommentAuthorProfile}
                   aria-label={`View ${username}'s profile`}
                 >
+                  {commentAvatarSrc ? (
+                    <img
+                      src={commentAvatarSrc}
+                      alt={`${username} profile`}
+                      className="feed-comment-avatar-image"
+                    />
+                  ) : (
+                    <div className="feed-comment-avatar">
+                      {getAvatarLetter(comment.author_username)}
+                    </div>
+                  )}
+                </button>
+              ) : (
+                commentAvatarSrc ? (
+                  <img
+                    src={commentAvatarSrc}
+                    alt={`${username} profile`}
+                    className="feed-comment-avatar-image"
+                  />
+                ) : (
                   <div className="feed-comment-avatar">
                     {getAvatarLetter(comment.author_username)}
                   </div>
-                </button>
-              ) : (
-                <div className="feed-comment-avatar">
-                  {getAvatarLetter(comment.author_username)}
-                </div>
+                )
               )}
 
               <div className="feed-comment-main">

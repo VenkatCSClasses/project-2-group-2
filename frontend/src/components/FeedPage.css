@@ -72,9 +72,11 @@
   border-radius: 999px;
   display: grid;
   place-items: center;
-  background: white;
+  background: #f3f4f6;
   color: #111827;
-  font-size: 1.2rem;
+  font-size: 0.95rem;
+  font-weight: 800;
+  border: 1px solid #e5e7eb;
 }
 
 .profile-circle-img {
@@ -84,6 +86,16 @@
   object-fit: cover;
   border: none;
   background: transparent;
+}
+
+.feed-avatar-image {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  flex: 0 0 44px;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
+  background: #f3f4f6;
 }
 
 .feed-list {
@@ -621,6 +633,17 @@
   color: #0f172a;
   font-size: 0.8rem;
   font-weight: 800;
+  flex: 0 0 30px;
+  margin-top: 1px;
+}
+
+.feed-comment-avatar-image {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
   flex: 0 0 30px;
   margin-top: 1px;
 }
