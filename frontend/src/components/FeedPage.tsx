@@ -633,6 +633,9 @@ function FeedPage({
             </span>
           </button>
 
+          <div className="feed-topbar-title">Feed</div>
+
+          <ProfileDropdown currentUserPfp={currentUserPfp} username={currentUsername} onOpenProfile={onOpenProfile} onOpenReportedPosts={onOpenReportedPosts} token={token} />
           <button
             className="filter-button"
             type="button"
@@ -654,7 +657,6 @@ function FeedPage({
               </>
             )}
           </button>
-          <ProfileDropdown currentUserPfp={currentUserPfp} onOpenProfile={onOpenProfile} onOpenReportedPosts={onOpenReportedPosts} token={token} />
         </header>
 
         <main className="feed-list">

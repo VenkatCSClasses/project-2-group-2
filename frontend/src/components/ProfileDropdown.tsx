@@ -1,91 +1,85 @@
-import { useEffect, useRef, useState } from 'react'
-import defaultProfileIcon from '../assets/default-profile.png'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import './ProfileDropdown.css'
+import { jwtDecode } from 'jwt-decode'
+import { getAvatarLetter } from './feed/utils'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
-type ProfileDropdownProps = {
+interface TokenInfo {
+  user_id: string
+  role: string
+  token_type: string
+  exp: number
+}
+
+interface ProfileDropdownProps {
   currentUserPfp: string | null
+  username: string
   onOpenProfile: () => void
-  onOpenReportedPosts: () => void
+  onOpenReportedPosts?: () => void
   token: string
 }
 
-function ProfileDropdown({
-  currentUserPfp,
-  onOpenProfile,
-  onOpenReportedPosts,
-}: ProfileDropdownProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement | null>(null)
-
-  const profileImageSrc = currentUserPfp
-    ? currentUserPfp.startsWith('http')
-      ? currentUserPfp
-      : `${API_BASE_URL}${currentUserPfp}`
-    : defaultProfileIcon
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false)
-      }
-    }
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [isOpen])
+export default function ProfileDropdown({ currentUserPfp, username, onOpenProfile, onOpenReportedPosts, token }: ProfileDropdownProps) {
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
+  const navigate = useNavigate()
+  const tokenInfo = jwtDecode<TokenInfo>(token)
 
   return (
-    <div className="profile-dropdown" ref={dropdownRef}>
+    <div className="profile-menu-container">
       <button
         className="profile-button"
         type="button"
-        aria-label="Profile menu"
-        onClick={() => setIsOpen((current) => !current)}
+        aria-label="Profile Menu"
+        onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
       >
-        <img
-          src={profileImageSrc}
-          alt="Profile"
-          className="profile-circle-img"
-        />
+        {currentUserPfp ? (
+          <img
+            src={
+              currentUserPfp.startsWith('http')
+                ? currentUserPfp
+                : `${API_BASE_URL}${currentUserPfp}`
+            }
+            alt="Profile"
+            className="profile-circle-img"
+          />
+        ) : (
+          <div className="feed-avatar">{getAvatarLetter(username)}</div>
+        )}
       </button>
 
-      {isOpen && (
+      {isProfileMenuOpen && (
         <div className="profile-dropdown-menu">
-          <button
-            type="button"
-            className="profile-dropdown-item"
+          <button className="profile-dropdown-item" type="button"
             onClick={() => {
-              setIsOpen(false)
+              setIsProfileMenuOpen(false)
               onOpenProfile()
             }}
           >
-            View Profile
+            Profile
           </button>
+          {tokenInfo && (tokenInfo.role === 'moderator' || tokenInfo.role === 'admin') && (
+            <button className="profile-dropdown-item" type="button"
+              onClick={() => {
+                setIsProfileMenuOpen(false)
+                if (onOpenReportedPosts) onOpenReportedPosts()
+              }}
+            >
+              Reported Posts
+            </button>
+          )}
 
-          <button
-            type="button"
-            className="profile-dropdown-item"
+          <button className="profile-dropdown-item" type="button"
             onClick={() => {
-              setIsOpen(false)
-              onOpenReportedPosts()
+              setIsProfileMenuOpen(false)
+              navigate('/logout')
             }}
           >
-            Reported Posts
+            Logout
           </button>
         </div>
       )}
     </div>
   )
 }
-
-export default ProfileDropdown
