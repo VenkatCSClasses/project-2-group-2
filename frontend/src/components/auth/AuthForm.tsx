@@ -9,6 +9,7 @@ type AuthFormProps = {
   onEmailChange: (value: string) => void
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void
   message: string
+  messageType: 'error' | 'success' | null
 }
 
 function AuthForm({
@@ -22,6 +23,7 @@ function AuthForm({
   onEmailChange,
   onSubmit,
   message,
+  messageType,
 }: AuthFormProps) {
   return (
     <main className="auth-page">
@@ -50,13 +52,6 @@ function AuthForm({
             onChange={(event) => onUsernameChange(event.target.value)}
           />
 
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(event) => onPasswordChange(event.target.value)}
-          />
-
           {mode === 'register' && (
             <input
               type="email"
@@ -66,12 +61,19 @@ function AuthForm({
             />
           )}
 
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(event) => onPasswordChange(event.target.value)}
+          />
+
           <button type="submit" className="auth-submit">
             {mode === 'login' ? 'Login' : 'Register'}
           </button>
         </form>
 
-        {message && <p className="auth-message">{message}</p>}
+        {message && <p className={`auth-message ${messageType === 'error' ? 'error' : 'success'}`}>{message}</p>}
       </div>
     </main>
   )
