@@ -119,6 +119,7 @@ function FeedPage({
           loading: false,
           error: 'Could not load comments',
         }))
+      
         return
       }
 
@@ -175,9 +176,9 @@ function FeedPage({
     try {
       const placeName = PLACE_NAMES[placeKey]
       const response = await fetch(
-        `${API_BASE_URL}/places/${encodeURIComponent(placeName)}`
+        `${API_BASE_URL}/items/by-place/${encodeURIComponent(placeName)}`
       )
-      const data: PlaceResponse = await response.json()
+      const data = await response.json()
 
       if (!response.ok) {
         setMenuItems([])
@@ -185,7 +186,7 @@ function FeedPage({
         return
       }
 
-      setMenuItems(data.place_info.food_items ?? [])
+      setMenuItems(data.items ?? [])
     } catch (error) {
       console.error(error)
       setMenuItems([])
@@ -619,6 +620,7 @@ function FeedPage({
   return (
     <>
       <div className="feed-page">
+    
         <header className="feed-topbar">
           <button
             className="icon-button"
@@ -633,9 +635,6 @@ function FeedPage({
             </span>
           </button>
 
-          <div className="feed-topbar-title">Feed</div>
-
-          <ProfileDropdown currentUserPfp={currentUserPfp} username={currentUsername} onOpenProfile={onOpenProfile} onOpenReportedPosts={onOpenReportedPosts} token={token} />
           <button
             className="filter-button"
             type="button"
@@ -657,8 +656,15 @@ function FeedPage({
               </>
             )}
           </button>
-        </header>
 
+          <ProfileDropdown
+            currentUserPfp={currentUserPfp}
+            username={currentUsername}
+            onOpenProfile={onOpenProfile}
+            onOpenReportedPosts={onOpenReportedPosts}
+            token={token}
+          />
+        </header>
         <main className="feed-list">
           {loading && <p className="feed-message">Loading feed...</p>}
           {message && <p className="feed-message">{message}</p>}
@@ -678,6 +684,7 @@ function FeedPage({
                 commentCount={post.comment_count ?? 0}
                 viewerRole={currentUserRole}
                 viewerUsername={currentUsername}
+                onOpenProfile={(username) => onOpenProfile(username)}
                 authorPfp={post.author_pfp_url}
                 onToggleComments={() => void toggleComments(post.id)}
                 onVote={(upvote) => void handleVote(post.id, upvote)}
