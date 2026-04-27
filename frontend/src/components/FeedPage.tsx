@@ -623,7 +623,7 @@ function FeedPage({
 
           <div className="feed-topbar-title">Feed</div>
 
-          <ProfileDropdown currentUserPfp={currentUserPfp} onOpenProfile={onOpenProfile} onOpenReportedPosts={onOpenReportedPosts} token={token} />
+          <ProfileDropdown currentUserPfp={currentUserPfp} username={currentUsername} onOpenProfile={onOpenProfile} onOpenReportedPosts={onOpenReportedPosts} token={token} />
         </header>
 
         <main className="feed-list">
