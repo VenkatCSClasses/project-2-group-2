@@ -22,6 +22,7 @@ export type Post = {
   author_pfp_url: string | null
   food_item_id: string | null
   food_item_name: string | null
+  food_place_name: string | null
   star_rating: number
   content: string | null
   image_url: string | null
@@ -48,6 +49,7 @@ export type ReportedPost = {
   author_username: string | null
   food_item_id: string | null
   food_item_name: string | null
+  food_place_name: string | null
   star_rating: number
   content: string | null
   image_url: string | null
@@ -90,7 +92,13 @@ export type FoodItem = {
   name: string
   description: string | null
   image_url: string | null
+  food_place_id?: string | null
   average_rating: number | null
+}
+
+export type ItemResponse = {
+  item_id: string
+  item_info: FoodItem
 }
 
 export type PlaceResponse = {

@@ -6,6 +6,7 @@ import { collectCommentSubtreeIds } from './feed/commentThread'
 import type {
   FeedPageProps,
   FoodItem,
+  ItemResponse,
   PlaceKey,
   PlaceResponse,
   Post,
@@ -45,6 +46,7 @@ function FeedPage({
   const [menuItems, setMenuItems] = useState<FoodItem[]>([])
   const [menuLoading, setMenuLoading] = useState(false)
   const [menuError, setMenuError] = useState('')
+  const [itemPlaceNames, setItemPlaceNames] = useState<Record<string, string>>({})
   const [isUploadPopupOpen, setIsUploadPopupOpen] = useState(false)
   const [currentUserPfp, setCurrentUserPfp] = useState<string | null>(null)
   const [currentUsername, setCurrentUsername] = useState('')
@@ -194,6 +196,72 @@ function FeedPage({
       setMenuLoading(false)
     }
   }, [])
+
+  useEffect(() => {
+    const missingItemIds = Array.from(
+      new Set(
+        posts
+          .filter((post) => post.food_item_id && !post.food_place_name)
+          .map((post) => post.food_item_id as string)
+          .filter((itemId) => !itemPlaceNames[itemId])
+      )
+    )
+
+    if (missingItemIds.length === 0) {
+      return
+    }
+
+    let isCancelled = false
+
+    async function loadPostPlaceNames() {
+      const loadedPlaces: Record<string, string> = {}
+      const placeNamesById: Record<string, string> = {}
+
+      await Promise.all(
+        missingItemIds.map(async (itemId) => {
+          try {
+            const itemResponse = await fetch(`${API_BASE_URL}/items/${itemId}`)
+            const itemData: ItemResponse = await itemResponse.json()
+            const placeId = itemData.item_info?.food_place_id
+
+            if (!itemResponse.ok || !placeId) {
+              return
+            }
+
+            if (!placeNamesById[placeId]) {
+              const placeResponse = await fetch(
+                `${API_BASE_URL}/places/${encodeURIComponent(placeId)}`
+              )
+              const placeData: PlaceResponse = await placeResponse.json()
+
+              if (!placeResponse.ok || !placeData.place_info?.name) {
+                return
+              }
+
+              placeNamesById[placeId] = placeData.place_info.name
+            }
+
+            loadedPlaces[itemId] = placeNamesById[placeId]
+          } catch (error) {
+            console.error('place name lookup error:', error)
+          }
+        })
+      )
+
+      if (!isCancelled && Object.keys(loadedPlaces).length > 0) {
+        setItemPlaceNames((current) => ({
+          ...current,
+          ...loadedPlaces,
+        }))
+      }
+    }
+
+    void loadPostPlaceNames()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [posts, itemPlaceNames])
 
   useEffect(() => {
     void loadPosts()
@@ -679,6 +747,11 @@ function FeedPage({
                 viewerRole={currentUserRole}
                 viewerUsername={currentUsername}
                 authorPfp={post.author_pfp_url}
+                showPlaceName
+                placeName={
+                  post.food_place_name ||
+                  (post.food_item_id ? itemPlaceNames[post.food_item_id] : null)
+                }
                 onToggleComments={() => void toggleComments(post.id)}
                 onVote={(upvote) => void handleVote(post.id, upvote)}
                 onDeletePost={() => void handleDeletePost(post.id)}

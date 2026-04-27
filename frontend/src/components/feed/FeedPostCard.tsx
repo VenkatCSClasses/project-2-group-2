@@ -17,6 +17,8 @@ type FeedPostCardProps = {
   viewerRole: ViewerRole;
   viewerUsername: string;
   authorPfp?: string | null;
+  showPlaceName?: boolean;
+  placeName?: string | null;
   onToggleComments: () => void;
   onVote: (vote: VoteSelection) => void;
   onDeletePost: () => void;
@@ -31,6 +33,11 @@ type FeedPostCardProps = {
   onReportComment: (commentId: string) => void;
 };
 
+type PostWithPlaceAliases = Post & {
+  place_name?: string | null;
+  diningHall?: string | null;
+};
+
 function FeedPostCard({
   post,
   apiBaseUrl,
@@ -39,6 +46,8 @@ function FeedPostCard({
   viewerRole,
   viewerUsername,
   authorPfp,
+  showPlaceName = false,
+  placeName: providedPlaceName,
   onToggleComments,
   onVote,
   onDeletePost,
@@ -52,10 +61,17 @@ function FeedPostCard({
   onDeleteComment,
   onReportComment,
 }: FeedPostCardProps) {
+  const postWithPlace = post as PostWithPlaceAliases;
   const username = post.author_username || "user";
   const ratingOutOfFive = (post.star_rating / 2).toFixed(1);
   const hasUpvoted = post.viewer_vote === "up";
   const hasDownvoted = post.viewer_vote === "down";
+  const placeName =
+    providedPlaceName ||
+    postWithPlace.food_place_name ||
+    postWithPlace.place_name ||
+    postWithPlace.diningHall;
+  const placeLabel = placeName?.replace(/\s+Dining Hall$/i, "");
   const imageSrc = post.image_url
     ? post.image_url.startsWith("http")
       ? post.image_url
@@ -109,6 +125,14 @@ function FeedPostCard({
                     •
                   </span>
                   <span className="feed-item-name">{post.food_item_name}</span>
+                </>
+              )}
+              {showPlaceName && placeLabel && (
+                <>
+                  <span className="feed-meta-separator" aria-hidden="true">
+                    •
+                  </span>
+                  <span className="feed-place-name">{placeLabel}</span>
                 </>
               )}
             </div>
