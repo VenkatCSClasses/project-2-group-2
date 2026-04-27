@@ -4,7 +4,7 @@ from sqlmodel import Session, select
 from app.database import cache, get_db
 from app.models import User, Review
 from app.schemas import UserRole
-from app.utils import get_current_user, get_current_admin, get_current_moderator
+from app.utils import get_current_user, get_current_admin, get_current_moderator, get_optional_current_user
 from app.serde import serialize_reviews
 from app.routes.helpers import parse_uuid
 
@@ -72,6 +72,34 @@ async def get_current_user_posts(start: int = 0, limit: int = 10, current_user: 
     return {"start": start, "limit": limit, "posts": results}
 
 
+@router.get("/{username}/posts")
+async def get_user_posts(
+    username: str,
+    start: int = 0,
+    limit: int = 10,
+    current_user: dict | None = Depends(get_optional_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Get posts for a specific user by username.
+    """
+    user = db.exec(select(User).where(User.username == username)).first()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    posts = db.exec(
+        select(Review)
+        .where(Review.author_id == user.id)
+        .order_by(Review.created_at.desc())
+        .offset(start)
+        .limit(limit)
+    ).all()
+
+    viewer_user_id = parse_uuid(current_user["user_id"]) if current_user else None
+    results = serialize_reviews(db, posts, viewer_user_id=viewer_user_id)
+    return {"start": start, "limit": limit, "posts": results}
+
+
 @router.get("/search")
 async def search_accounts(query: str, db: Session = Depends(get_db)):
     """
@@ -120,7 +148,11 @@ async def get_reported_accounts(current_user: dict = Depends(get_current_moderat
 
 
 @router.get("/{username}")
-async def get_account(username: str, db: Session = Depends(get_db)):
+async def get_account(
+    username: str,
+    current_user: dict | None = Depends(get_optional_current_user),
+    db: Session = Depends(get_db),
+):
     """
     Get account information for a user.
 
@@ -132,10 +164,16 @@ async def get_account(username: str, db: Session = Depends(get_db)):
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
 
+    can_view_email = bool(current_user and current_user.get("user_id") == str(user.id))
+
     return {
         "message": "Account retrieved successfully",
         "username": username,
-        "account_info": {"email": user.email, "role": user.role.value, "profile_picture": user.profile_image_url},
+        "account_info": {
+            "email": user.email if can_view_email else None,
+            "role": user.role.value,
+            "profile_picture": user.profile_image_url,
+        },
     }
 
 

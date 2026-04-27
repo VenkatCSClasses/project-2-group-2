@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './ProfileDropdown.css'
 import { jwtDecode } from 'jwt-decode'
-import { getAvatarLetter } from './feed/utils'
+import { getAvatarLetter, resolveProfileImageSrc } from './feed/utils'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
@@ -16,7 +16,7 @@ interface TokenInfo {
 interface ProfileDropdownProps {
   currentUserPfp: string | null
   username: string
-  onOpenProfile: () => void
+  onOpenProfile: (username: string) => void
   onOpenReportedPosts?: () => void
   token: string
 }
@@ -25,6 +25,7 @@ export default function ProfileDropdown({ currentUserPfp, username, onOpenProfil
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
   const navigate = useNavigate()
   const tokenInfo = jwtDecode<TokenInfo>(token)
+  const currentUserAvatarSrc = resolveProfileImageSrc(currentUserPfp, API_BASE_URL)
 
   return (
     <div className="profile-menu-container">
@@ -34,18 +35,14 @@ export default function ProfileDropdown({ currentUserPfp, username, onOpenProfil
         aria-label="Profile Menu"
         onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
       >
-        {currentUserPfp ? (
+        {currentUserAvatarSrc ? (
           <img
-            src={
-              currentUserPfp.startsWith('http')
-                ? currentUserPfp
-                : `${API_BASE_URL}${currentUserPfp}`
-            }
+            src={currentUserAvatarSrc}
             alt="Profile"
             className="profile-circle-img"
           />
         ) : (
-          <div className="feed-avatar">{getAvatarLetter(username)}</div>
+          <div className="profile-circle">{getAvatarLetter(username)}</div>
         )}
       </button>
 
@@ -54,7 +51,9 @@ export default function ProfileDropdown({ currentUserPfp, username, onOpenProfil
           <button className="profile-dropdown-item" type="button"
             onClick={() => {
               setIsProfileMenuOpen(false)
-              onOpenProfile()
+              if (username) {
+                onOpenProfile(username)
+              }
             }}
           >
             Profile
