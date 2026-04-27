@@ -16,6 +16,7 @@ type FeedPostCardProps = {
   commentCount: number;
   viewerRole: ViewerRole;
   viewerUsername: string;
+  authorPfp?: string | null;
   onToggleComments: () => void;
   onVote: (vote: VoteSelection) => void;
   onDeletePost: () => void;
@@ -37,6 +38,7 @@ function FeedPostCard({
   commentCount,
   viewerRole,
   viewerUsername,
+  authorPfp,
   onToggleComments,
   onVote,
   onDeletePost,
@@ -68,8 +70,19 @@ function FeedPostCard({
   return (
     <article className="feed-card">
       <header className="feed-card-header">
-        <div className="feed-avatar">{getAvatarLetter(username)}</div>
-
+      {authorPfp ? (
+          <img
+            src={
+              authorPfp.startsWith('http')
+                ? authorPfp
+                : `${apiBaseUrl}${authorPfp}`
+            }
+            alt="Profile"
+            className="profile-circle-img"
+          />
+        ) : (
+          <div className="feed-avatar">{getAvatarLetter(username)}</div>
+        )}
         <div className="feed-card-heading">
           <div className="feed-user-meta">
             <div className="feed-user-row">

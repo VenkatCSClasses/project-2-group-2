@@ -142,6 +142,7 @@ export default function ReportedPostsPage({ token, onBack }: ReportedPostsPagePr
                     commentCount={post.comment_count ?? 0}
                     viewerRole={'admin' as ViewerRole}
                     viewerUsername={'admin'}
+                    authorPfp={post.author_pfp_url}
                     onToggleComments={() => handleToggleComments(post.id)}
                     onVote={(vote) => handleVote(post.id, vote)}
                     onDeletePost={() => handleDeletePost(post.id)}
