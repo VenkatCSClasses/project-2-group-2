@@ -1186,3 +1186,14 @@
   color: #111827;
   font-size: 1rem;
 }
+.filter-button {
+  height: 46px;
+  width: 100%;
+  font-weight: 700;
+  color: #111827;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
