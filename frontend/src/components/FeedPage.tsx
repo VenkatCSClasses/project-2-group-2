@@ -119,6 +119,7 @@ function FeedPage({
           loading: false,
           error: 'Could not load comments',
         }))
+      
         return
       }
 
@@ -619,6 +620,7 @@ function FeedPage({
   return (
     <>
       <div className="feed-page">
+    
         <header className="feed-topbar">
           <button
             className="icon-button"
@@ -632,50 +634,37 @@ function FeedPage({
               <span></span>
             </span>
           </button>
-<header className="feed-topbar">
-  <button
-    className="icon-button"
-    type="button"
-    aria-label="Open menu"
-    onClick={() => setIsMenuOpen((current) => !current)}
-  >
-    <span className="hamburger-icon">
-      <span></span>
-      <span></span>
-      <span></span>
-    </span>
-  </button>
 
-  <button
-    className="filter-button"
-    type="button"
-    onClick={() =>
-      setFilterMode((current) =>
-        current === 'latest' ? 'top' : 'latest'
-      )
-    }
-  >
-    {filterMode === 'latest' ? (
-      <>
-        <Clock size={18} />
-        <span>Latest</span>
-      </>
-    ) : (
-      <>
-        <Flame size={18} />
-        <span>Top</span>
-      </>
-    )}
-  </button>
+          <button
+            className="filter-button"
+            type="button"
+            onClick={() =>
+              setFilterMode((current) =>
+                current === 'latest' ? 'top' : 'latest'
+              )
+            }
+          >
+            {filterMode === 'latest' ? (
+              <>
+                <Clock size={18} />
+                <span>Latest</span>
+              </>
+            ) : (
+              <>
+                <Flame size={18} />
+                <span>Top</span>
+              </>
+            )}
+          </button>
 
-  <ProfileDropdown
-    currentUserPfp={currentUserPfp}
-    username={currentUsername}
-    onOpenProfile={onOpenProfile}
-    onOpenReportedPosts={onOpenReportedPosts}
-    token={token}
-  />
-</header>
+          <ProfileDropdown
+            currentUserPfp={currentUserPfp}
+            username={currentUsername}
+            onOpenProfile={onOpenProfile}
+            onOpenReportedPosts={onOpenReportedPosts}
+            token={token}
+          />
+        </header>
         <main className="feed-list">
           {loading && <p className="feed-message">Loading feed...</p>}
           {message && <p className="feed-message">{message}</p>}
