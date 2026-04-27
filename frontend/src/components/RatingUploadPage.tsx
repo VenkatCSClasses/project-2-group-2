@@ -281,7 +281,7 @@ function RatingUploadPage({
     const query = formData.itemName.trim().toLowerCase()
 
     if (!query) {
-      return menuItems
+      return []
     }
 
     return menuItems.filter((item) => {

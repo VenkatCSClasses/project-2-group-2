@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import FeedPostCard from './feed/FeedPostCard'
+import MenuItemCard from './MenuItemCard'
 import { collectCommentSubtreeIds } from './feed/commentThread'
 import type {
   FoodItem,
@@ -779,12 +780,12 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
               )}
 
               {sortedMenuItems.map((item) => (
-                <button
+                <MenuItemCard
                   key={item.id}
-                  type="button"
-                  className={`review-menu-item-card ${
-                    selectedItem?.id === item.id ? 'selected' : ''
-                  }`}
+                  name={item.name}
+                  description={item.description}
+                  averageRating={item.average_rating}
+                  isSelected={selectedItem?.id === item.id}
                   onClick={() => {
                     if (selectedItem?.id === item.id) {
                       void loadAllPlaceReviews(selectedPlace)
@@ -793,22 +794,7 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
                   
                     void loadItemReviews(item)
                   }}
-                >
-                  <div className="review-menu-item-top">
-                    <h3>{item.name}</h3>
-                    <span className="review-menu-item-rating">
-                      {typeof item.average_rating === 'number'
-                        ? `${(item.average_rating / 2).toFixed(1)}★`
-                        : 'No ratings'}
-                    </span>
-                  </div>
-
-                  {item.description && (
-                    <p className="review-menu-item-description">
-                      {item.description}
-                    </p>
-                  )}
-                </button>
+                />
               ))}
             </div>
           </section>
