@@ -27,6 +27,47 @@ const PLACE_NAMES: Record<PlaceKey, string> = {
   terrace: 'Terrace Dining Hall',
 }
 
+function getPlaceKeyFromName(placeName?: string | null): PlaceKey | null {
+  if (!placeName) {
+    return null
+  }
+
+  const normalized = placeName.trim().toLowerCase()
+
+  if (normalized.includes('campus')) {
+    return 'campus'
+  }
+
+  if (normalized.includes('terrace')) {
+    return 'terrace'
+  }
+
+  return null
+}
+
+function buildDiningReviewsPath(options?: {
+  placeKey?: PlaceKey | null
+  itemId?: string | null
+  itemName?: string | null
+}) {
+  const params = new URLSearchParams()
+
+  if (options?.placeKey) {
+    params.set('hall', options.placeKey)
+  }
+
+  if (options?.itemId) {
+    params.set('itemId', options.itemId)
+  }
+
+  if (options?.itemName) {
+    params.set('itemName', options.itemName)
+  }
+
+  const query = params.toString()
+  return query ? `/dining-reviews?${query}` : '/dining-reviews'
+}
+
 function FeedPage({
   token,
   onOpenUpload,
@@ -736,6 +777,23 @@ function FeedPage({
 
           {visiblePosts.map((post) => {
             const thread = getThread(post.id)
+            const resolvedPlaceName =
+              post.food_place_name ||
+              (post.food_item_id ? itemPlaceNames[post.food_item_id] : null)
+            const placeKey = getPlaceKeyFromName(resolvedPlaceName)
+            const placeLink = resolvedPlaceName
+              ? buildDiningReviewsPath({
+                  placeKey,
+                })
+              : null
+            const itemLink =
+              post.food_item_name && (resolvedPlaceName || post.food_item_id)
+                ? buildDiningReviewsPath({
+                    placeKey,
+                    itemId: post.food_item_id,
+                    itemName: post.food_item_name,
+                  })
+                : null
 
             return (
               <FeedPostCard
@@ -748,10 +806,9 @@ function FeedPage({
                 viewerUsername={currentUsername}
                 authorPfp={post.author_pfp_url}
                 showPlaceName
-                placeName={
-                  post.food_place_name ||
-                  (post.food_item_id ? itemPlaceNames[post.food_item_id] : null)
-                }
+                placeName={resolvedPlaceName}
+                itemLink={itemLink}
+                placeLink={placeLink}
                 onToggleComments={() => void toggleComments(post.id)}
                 onVote={(upvote) => void handleVote(post.id, upvote)}
                 onDeletePost={() => void handleDeletePost(post.id)}

@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
 import FeedPostCard from './feed/FeedPostCard'
 import MenuItemCard from './MenuItemCard'
 import { collectCommentSubtreeIds } from './feed/commentThread'
@@ -23,6 +24,28 @@ const PLACE_NAMES: Record<PlaceKey, string> = {
   terrace: 'Terrace Dining Hall',
 }
 
+function parsePlaceKey(rawPlace?: string | null): PlaceKey | null {
+  if (!rawPlace) {
+    return null
+  }
+
+  const normalized = rawPlace.trim().toLowerCase()
+
+  if (normalized.includes('campus')) {
+    return 'campus'
+  }
+
+  if (normalized.includes('terrace')) {
+    return 'terrace'
+  }
+
+  return null
+}
+
+function normalizeItemName(rawName?: string | null): string {
+  return rawName?.trim().toLowerCase() ?? ''
+}
+
 type DiningHallReviewsPageProps = {
   token: string
   onBack: () => void
@@ -32,7 +55,11 @@ type SortMode = 'highest' | 'lowest'
 type ReviewSortMode = 'newest' | 'highest' | 'lowest'
 
 function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
-  const [selectedPlace, setSelectedPlace] = useState<PlaceKey>('campus')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [selectedPlace, setSelectedPlace] = useState<PlaceKey>(() => {
+    const queryPlace = searchParams.get('hall')
+    return parsePlaceKey(queryPlace) ?? 'campus'
+  })
   const [sortMode, setSortMode] = useState<SortMode>('highest')
   const [searchQuery, setSearchQuery] = useState('')
   const [reviewSortMode, setReviewSortMode] = useState<ReviewSortMode>('newest')
@@ -49,6 +76,7 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
   const [message, setMessage] = useState('')
   const [currentUsername, setCurrentUsername] = useState('')
   const [currentUserRole, setCurrentUserRole] = useState<ViewerRole>('')
+  const lastLoadedMenuPlaceRef = useRef<PlaceKey | null>(null)
 
   const authHeaders = useMemo(
     () => (token ? { Authorization: `Bearer ${token}` } : undefined),
@@ -62,6 +90,22 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
     }),
     [authHeaders]
   )
+
+  const updateReviewQueryParams = useCallback((placeKey: PlaceKey, item?: FoodItem | null) => {
+    const params = new URLSearchParams({
+      hall: placeKey,
+    })
+
+    if (item?.id) {
+      params.set('itemId', item.id)
+    }
+
+    if (item?.name) {
+      params.set('itemName', item.name)
+    }
+
+    setSearchParams(params)
+  }, [setSearchParams])
 
   function updateThreadState(
     postId: string,
@@ -127,10 +171,9 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
   )
 
   const loadMenu = useCallback(
-    async (placeKey: PlaceKey) => {
+    async (placeKey: PlaceKey, options?: { skipPlaceReviews?: boolean }) => {
       setMenuLoading(true)
       setMenuError('')
-      setSelectedItem(null)
       setReviewsError('')
 
       try {
@@ -147,7 +190,10 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
         }
 
         setMenuItems(data.items ?? [])
-        void loadAllPlaceReviews(placeKey)
+
+        if (!options?.skipPlaceReviews) {
+          void loadAllPlaceReviews(placeKey)
+        }
       } catch (error) {
         console.error(error)
         setMenuItems([])
@@ -160,8 +206,22 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
   )
 
   useEffect(() => {
-    void loadMenu(selectedPlace)
-  }, [loadMenu, selectedPlace])
+    if (lastLoadedMenuPlaceRef.current === selectedPlace) {
+      return
+    }
+
+    lastLoadedMenuPlaceRef.current = selectedPlace
+    const hasItemQuery = Boolean(searchParams.get('itemId') || searchParams.get('itemName'))
+    void loadMenu(selectedPlace, { skipPlaceReviews: hasItemQuery })
+  }, [loadMenu, searchParams, selectedPlace])
+
+  useEffect(() => {
+    const queryPlace = parsePlaceKey(searchParams.get('hall'))
+
+    if (queryPlace && queryPlace !== selectedPlace) {
+      setSelectedPlace(queryPlace)
+    }
+  }, [searchParams, selectedPlace])
 
   useEffect(() => {
     async function loadUser() {
@@ -185,7 +245,7 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
     void loadUser()
   }, [authHeaders])
 
-  async function loadItemReviews(item: FoodItem) {
+  const loadItemReviews = useCallback(async (item: FoodItem) => {
     setSelectedItem(item)
     setReviewsLoading(true)
     setReviewsError('')
@@ -213,7 +273,61 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
     } finally {
       setReviewsLoading(false)
     }
-  }
+  }, [authHeaders])
+
+  useEffect(() => {
+    const queryItemId = searchParams.get('itemId')
+    const queryItemNameRaw = searchParams.get('itemName')
+    const queryItemName = normalizeItemName(queryItemNameRaw)
+
+    if (!queryItemId && !queryItemName) {
+      if (selectedItem) {
+        setSelectedItem(null)
+        if (!menuLoading) {
+          void loadAllPlaceReviews(selectedPlace)
+        }
+      }
+      return
+    }
+
+    if (menuLoading) {
+      return
+    }
+
+    const matchedItem =
+      (queryItemId ? menuItems.find((item) => item.id === queryItemId) : undefined) ??
+      (queryItemName
+        ? menuItems.find((item) => normalizeItemName(item.name) === queryItemName)
+        : undefined)
+
+    if (!matchedItem) {
+      if (queryItemId) {
+        void loadItemReviews({
+          id: queryItemId,
+          name: queryItemNameRaw?.trim() || 'Selected item',
+          description: null,
+          image_url: null,
+          average_rating: null,
+        })
+        return
+      }
+
+      updateReviewQueryParams(selectedPlace)
+      void loadAllPlaceReviews(selectedPlace)
+      return
+    }
+
+    void loadItemReviews(matchedItem)
+  }, [
+    loadAllPlaceReviews,
+    loadItemReviews,
+    menuLoading,
+    menuItems,
+    selectedItem,
+    searchParams,
+    selectedPlace,
+    updateReviewQueryParams,
+  ])
 
   async function loadPostDetails(postId: string) {
     updateThreadState(postId, (current) => ({
@@ -719,7 +833,10 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
               className={`hall-selector-button ${
                 selectedPlace === 'campus' ? 'active' : ''
               }`}
-              onClick={() => setSelectedPlace('campus')}
+              onClick={() => {
+                setSelectedPlace('campus')
+                updateReviewQueryParams('campus')
+              }}
             >
               Campus Center
             </button>
@@ -729,7 +846,10 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
               className={`hall-selector-button ${
                 selectedPlace === 'terrace' ? 'active' : ''
               }`}
-              onClick={() => setSelectedPlace('terrace')}
+              onClick={() => {
+                setSelectedPlace('terrace')
+                updateReviewQueryParams('terrace')
+              }}
             >
               Terraces
             </button>
@@ -788,10 +908,12 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
                   isSelected={selectedItem?.id === item.id}
                   onClick={() => {
                     if (selectedItem?.id === item.id) {
+                      updateReviewQueryParams(selectedPlace)
                       void loadAllPlaceReviews(selectedPlace)
                       return
                     }
-                  
+
+                    updateReviewQueryParams(selectedPlace, item)
                     void loadItemReviews(item)
                   }}
                 />
@@ -832,39 +954,41 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
             ) : (
               <>
                 <div className="selected-item-header">
-              <div>
-                <h2 className="selected-item-title">{selectedItem.name}</h2>
-                <p className="selected-item-rating">
-                  {typeof selectedItem.average_rating === 'number'
-                    ? `${(selectedItem.average_rating / 2).toFixed(1)}★ average`
-                    : 'No ratings yet'}
-                </p>
-              </div>
+                  <div className="selected-item-meta">
+                    <h2 className="selected-item-title">{selectedItem.name}</h2>
+                    <p className="selected-item-rating">
+                      {typeof selectedItem.average_rating === 'number'
+                        ? `${(selectedItem.average_rating / 2).toFixed(1)}★ average`
+                        : 'No ratings yet'}
+                    </p>
+                    <button
+                      type="button"
+                      className="clear-selected-item-button"
+                      onClick={() => {
+                        updateReviewQueryParams(selectedPlace)
+                        void loadAllPlaceReviews(selectedPlace)
+                      }}
+                    >
+                      Back to all reviews
+                    </button>
+                  </div>
 
-              <button
-                type="button"
-                className="clear-selected-item-button"
-                onClick={() => void loadAllPlaceReviews(selectedPlace)}
-              >
-                Show all reviews
-              </button>
-
-              <div className="review-sort-row">
-                <label htmlFor="selected-review-sort" className="sort-label">
-                  Reviews
-                </label>
-                <select
-                  id="selected-review-sort"
-                  className="sort-select"
-                  value={reviewSortMode}
-                  onChange={(e) => setReviewSortMode(e.target.value as ReviewSortMode)}
-                >
-                  <option value="newest">Newest</option>
-                  <option value="highest">Highest stars</option>
-                  <option value="lowest">Lowest stars</option>
-                </select>
-              </div>
-            </div>
+                  <div className="review-sort-row">
+                    <label htmlFor="selected-review-sort" className="sort-label">
+                      Reviews
+                    </label>
+                    <select
+                      id="selected-review-sort"
+                      className="sort-select"
+                      value={reviewSortMode}
+                      onChange={(e) => setReviewSortMode(e.target.value as ReviewSortMode)}
+                    >
+                      <option value="newest">Newest</option>
+                      <option value="highest">Highest stars</option>
+                      <option value="lowest">Lowest stars</option>
+                    </select>
+                  </div>
+                </div>
 
                 {renderReviewCards('No reviews for this item yet.')}
               </>

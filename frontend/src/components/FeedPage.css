@@ -198,6 +198,18 @@
   font-weight: 700;
 }
 
+.feed-inline-link {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.feed-inline-link:hover,
+.feed-inline-link:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  color: #111827;
+}
+
 .feed-card-content {
   display: flex;
   flex-direction: column;
