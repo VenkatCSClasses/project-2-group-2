@@ -105,3 +105,6 @@ From the feed page you can also click the 3 dots and remove any review or commen
 
 Moderators can do the above actions, but they cannot set the role of users, only admins can do that. To set the role of a user, go to their profile and use the role dropdown to set their role to either user, moderator or admin.
 ![Set Role](images/set-role.png)
+
+
+All of the actions listed in this file were used as part of the testing process as our system and component tests to make sure that the app is working as intended and that all the features are functioning properly. The standard system test was to follow this file step by step. 
