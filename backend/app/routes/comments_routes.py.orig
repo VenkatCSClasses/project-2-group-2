@@ -74,27 +74,6 @@ async def comment_on_post(
         ),
     }
 
-@router.post("/comments/{comment_id}/clear-reports")
-async def clear_comment_reports(
-    comment_id: str,
-    current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """
-    Clear all reports for a comment.
-    """
-    comment_id = parse_uuid(comment_id)
-    comment = get_or_404(db, Comment, comment_id)
-
-    if current_user["role"] not in {"moderator", "admin"}:
-        raise HTTPException(status_code=403, detail="You do not have permission to clear reports for this comment")
-
-    reports = db.query(Report).filter(Report.comment_id == comment.id).all()
-    for report in reports:
-        db.delete(report)
-
-    db.commit()
-    return {"message": "Reports cleared successfully", "comment_id": comment.id}
 
 @router.post("/comments/{comment_id}/report")
 async def report_comment(
@@ -151,3 +130,44 @@ async def delete_comment(
     db.delete(comment)
     db.commit()
     return {"message": "Comment deleted successfully", "comment_id": comment.id}
+
+@router.post("/comments/{comment_id}/clear-reports")
+async def clear_comment_reports(comment_id: str, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """
+    Clear reports for a comment.
+
+    This endpoint allows moderators to clear all reports for a specific comment.
+
+    - **comment_id**: The ID of the comment for which to clear reports.
+    """
+    comment_id = parse_uuid(comment_id)
+    comment = get_or_404(db, Comment, comment_id)
+
+    if current_user["role"] not in {"moderator", "admin"}:
+        raise HTTPException(status_code=403, detail="You do not have permission to clear reports for this comment")
+
+    reports = db.query(Report).filter(Report.comment_id == comment.id).all()
+    for report in reports:
+        db.delete(report)
+
+    db.commit()
+
+    return {"message": "Reports cleared successfully", "comment_id": comment.id}
+
+@router.post("/comments/{comment_id}/clear-reports")
+async def clear_comment_reports(
+    comment_id: str, current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    comment_id = parse_uuid(comment_id)
+    comment = get_or_404(db, Comment, comment_id)
+
+    if current_user["role"] not in {"moderator", "admin"}:
+        raise HTTPException(status_code=403, detail="You do not have permission to clear reports for this comment")
+
+    reports = db.query(Report).filter(Report.comment_id == comment.id).all()
+    for report in reports:
+        db.delete(report)
+
+    db.commit()
+
+    return {"message": "Reports cleared successfully", "comment_id": comment.id}

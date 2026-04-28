@@ -198,6 +198,28 @@
   border-color: #888;
 }
 
+.profile-role-select {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 15px;
+  font-family: inherit;
+  font-weight: 500;
+  color: #111;
+  background-color: #fff;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.profile-role-select:hover {
+  border-color: #999;
+}
+
+.profile-role-select:focus {
+  border-color: #000;
+}
+
 .profile-edit-actions {
   display: flex;
   gap: 12px;

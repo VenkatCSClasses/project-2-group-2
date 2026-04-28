@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { ArrowLeft, Trash2, Ban, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Trash2, Ban, RefreshCw, MessageSquare } from 'lucide-react';
 import FeedPostCard from './feed/FeedPostCard';
-import type { ThreadState, VoteSelection, ViewerRole, ReportedPost } from './feed/types';
+import type { ThreadState, VoteSelection, ViewerRole, ReportedPost, ReportedComment } from './feed/types';
 import { createInitialThreadState } from './feed/utils';
 import './ReportedPostsPage.css';
 
@@ -14,6 +14,8 @@ type ReportedPostsPageProps = {
 
 export default function ReportedPostsPage({ token, onBack }: ReportedPostsPageProps) {
   const [posts, setPosts] = useState<ReportedPost[]>([]);
+  const [comments, setComments] = useState<ReportedComment[]>([]);
+  const [activeTab, setActiveTab] = useState<'posts' | 'comments'>('posts');
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [threadStates] = useState<Record<string, ThreadState>>({});
@@ -31,13 +33,14 @@ export default function ReportedPostsPage({ token, onBack }: ReportedPostsPagePr
       });
       const data = await response.json();
       if (!response.ok) {
-        setMessage('Failed to load reported posts');
+        setMessage('Failed to load reported content');
         return;
       }
       setPosts(Object.values(data.reported_posts || {}));
+      setComments(Object.values(data.reported_comments || {}));
     } catch (err) {
       console.error(err);
-      setMessage('Network error loading reported posts');
+      setMessage('Network error loading reported content');
     } finally {
       setLoading(false);
     }
@@ -101,7 +104,45 @@ export default function ReportedPostsPage({ token, onBack }: ReportedPostsPagePr
       console.error(error);
       alert("Network error");
     }
-  }
+  };
+
+  const handleDeleteCommentAdmin = async (commentId: string) => {
+    if (!window.confirm("Are you sure you want to delete this comment?")) return;
+    try {
+      const response = await fetch(`${API_BASE_URL}/posts/comments/${commentId}/delete`, {
+        method: 'POST',
+        headers: authHeaders,
+      });
+      if (response.ok) {
+        setComments((current) => current.filter((c) => c.id !== commentId));
+      } else {
+        alert("Failed to delete comment");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Network error");
+    }
+  };
+
+  const handleClearCommentReportsAdmin = async (commentId: string) => {
+    if (!window.confirm("Are you sure you want to clear reports for this comment?")) return;
+    try {
+      // Create endpoint on backend or let users handle it if it exists. 
+      // Ensure backend has: router.post("/comments/{comment_id}/clear-reports")
+      const response = await fetch(`${API_BASE_URL}/posts/comments/${commentId}/clear-reports`, {
+        method: 'POST',
+        headers: authHeaders,
+      });
+      if (response.ok) {
+        setComments((current) => current.filter((c) => c.id !== commentId));
+      } else {
+        alert("Failed to clear comment reports");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Network error");
+    }
+  };
 
   const handleVote = (_postId: string, _vote: VoteSelection) => {};
   const handleToggleComments = (_postId: string) => {};
@@ -120,95 +161,186 @@ export default function ReportedPostsPage({ token, onBack }: ReportedPostsPagePr
         <button className="back-button" onClick={onBack} aria-label="Go back">
           <ArrowLeft className="icon" />
         </button>
-        <h2 className="page-title">Reported Posts</h2>
+        <h2 className="page-title">Reported Content</h2>
       </header>
 
-      <main className="reported-posts-content">
-        {loading ? (
-          <p className="loading-msg">Loading reported posts...</p>
-        ) : message ? (
-          <p className="error-msg">{message}</p>
-        ) : posts.length === 0 ? (
-          <p className="empty-msg">No reported posts at this time.</p>
-        ) : (
-          <div className="posts-list">
-            {posts.map((post) => (
-              <div key={post.id} className="reported-post-container">
-                <div className="card-wrapping-box">
-                  <FeedPostCard
-                    post={post}
-                    apiBaseUrl={API_BASE_URL}
-                    thread={threadStates[post.id] ?? createInitialThreadState()}
-                    commentCount={post.comment_count ?? 0}
-                    viewerRole={'admin' as ViewerRole}
-                    viewerUsername={'admin'}
-                    authorPfp={post.author_pfp_url}
-                    onToggleComments={() => handleToggleComments(post.id)}
-                    onVote={(vote) => handleVote(post.id, vote)}
-                    onDeletePost={() => handleDeletePost(post.id)}
-                    onReportPost={() => {}}
-                    onDraftChange={(val) => handleDraftChange(post.id, val)}
-                    onReplyDraftChange={(cId, val) => handleReplyDraftChange(post.id, cId, val)}
-                    onReplyToggle={(cId) => handleReplyToggle(post.id, cId)}
-                    onCloseReply={() => handleCloseReply(post.id)}
-                    onSubmitComment={(pId) => handleSubmitComment(post.id, pId)}
-                    onCommentVote={(cId, vote) => handleCommentVote(post.id, cId, vote)}
-                    onDeleteComment={(cId) => handleDeleteComment(post.id, cId)}
-                    onReportComment={(cId) => handleReportComment(post.id, cId)}
-                  />
-                </div>
-                <div className="moderator-actions">
-                  <button 
-                    className="mod-btn suspend-btn" 
-                    onClick={() => handleBanUser(post.author_username)}
-                    disabled={!post.author_username}
-                  >
-                    <Ban className="mod-icon" />
-                    Ban {post.author_username || 'Unknown'}
-                  </button>
-                  <button 
-                    className="mod-btn delete-btn" 
-                    onClick={() => handleDeletePost(post.id)}
-                  >
-                    <Trash2 className="mod-icon" />
-                    Delete Post
-                  </button>
+      <div className="reports-tabs">
+        <button 
+          className={`tab-btn ${activeTab === 'posts' ? 'active' : ''}`}
+          onClick={() => setActiveTab('posts')}
+        >
+          Reported Posts ({posts.length})
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'comments' ? 'active' : ''}`}
+          onClick={() => setActiveTab('comments')}
+        >
+          Reported Comments ({comments.length})
+        </button>
+      </div>
 
-                  <button
-                    className="mod-btn clear-reports-btn"
-                    onClick={() => handleClearReports(post.id)}
-                  >
-                    <RefreshCw className="mod-icon" />
-                    Clear Reports
-                  </button>
-                  <p className="report-count">{post.report_count || 0} report(s)</p>
-                </div>
-                
-                {post.reports && post.reports.length > 0 && (
-                  <div className="reports-reasons-list">
-                    <h4>Report Reasons:</h4>
-                    <ul>
-                      {post.reports.map((report) => (
-                        <li key={report.id}>
-                          <span className="report-reason">
-                            {report.reason && report.reason.trim().length > 0 ? (
-                              report.reason
-                            ) : (
-                              <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>No reason given</span>
-                            )}
-                          </span>
-                          <span className="report-date">
-                            {new Date(report.created_at).toLocaleDateString()}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
+      <main className="reported-posts-content">
+        {loading && (
+          <p className="loading-msg">Loading reported content...</p>
+        )}
+
+        {!loading && message && (
+          <p className="error-msg">{message}</p>
+        )}
+
+        {!loading && !message && activeTab === 'posts' && (
+          posts.length === 0 ? (
+            <p className="empty-msg">No reported posts at this time.</p>
+          ) : (
+            <div className="posts-list">
+              {posts.map((post) => (
+                <div key={post.id} className="reported-post-container">
+                  <div className="card-wrapping-box">
+                    <FeedPostCard
+                      post={post}
+                      apiBaseUrl={API_BASE_URL}
+                      thread={threadStates[post.id] ?? createInitialThreadState()}
+                      commentCount={post.comment_count ?? 0}
+                      viewerRole={'admin' as ViewerRole}
+                      viewerUsername={'admin'}
+                      authorPfp={post.author_pfp_url}
+                      onToggleComments={() => handleToggleComments(post.id)}
+                      onVote={(vote) => handleVote(post.id, vote)}
+                      onDeletePost={() => handleDeletePost(post.id)}
+                      onReportPost={() => {}}
+                      onDraftChange={(val) => handleDraftChange(post.id, val)}
+                      onReplyDraftChange={(cId, val) => handleReplyDraftChange(post.id, cId, val)}
+                      onReplyToggle={(cId) => handleReplyToggle(post.id, cId)}
+                      onCloseReply={() => handleCloseReply(post.id)}
+                      onSubmitComment={(pId) => handleSubmitComment(post.id, pId)}
+                      onCommentVote={(cId, vote) => handleCommentVote(post.id, cId, vote)}
+                      onDeleteComment={(cId) => handleDeleteComment(post.id, cId)}
+                      onReportComment={(cId) => handleReportComment(post.id, cId)}
+                    />
                   </div>
-                )}
-                
-              </div>
-            ))}
-          </div>
+                  <div className="moderator-actions">
+                    <button 
+                      className="mod-btn suspend-btn" 
+                      onClick={() => handleBanUser(post.author_username)}
+                      disabled={!post.author_username}
+                    >
+                      <Ban className="mod-icon" />
+                      Ban {post.author_username || 'Unknown'}
+                    </button>
+                    <button 
+                      className="mod-btn delete-btn" 
+                      onClick={() => handleDeletePost(post.id)}
+                    >
+                      <Trash2 className="mod-icon" />
+                      Delete Post
+                    </button>
+
+                    <button
+                      className="mod-btn clear-reports-btn"
+                      onClick={() => handleClearReports(post.id)}
+                    >
+                      <RefreshCw className="mod-icon" />
+                      Clear Reports
+                    </button>
+                    <p className="report-count">{post.report_count || 0} report(s)</p>
+                  </div>
+                  
+                  {post.reports && post.reports.length > 0 && (
+                    <div className="reports-reasons-list">
+                      <h4>Report Reasons:</h4>
+                      <ul>
+                        {post.reports.map((report) => (
+                          <li key={report.id}>
+                            <span className="report-reason">
+                              {report.reason && report.reason.trim().length > 0 ? (
+                                report.reason
+                              ) : (
+                                <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>No reason given</span>
+                              )}
+                            </span>
+                            <span className="report-date">
+                              {new Date(report.created_at).toLocaleDateString()}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )
+        )}
+
+        {!loading && !message && activeTab === 'comments' && (
+          comments.length === 0 ? (
+            <p className="empty-msg">No reported comments at this time.</p>
+          ) : (
+            <div className="posts-list">
+              {comments.map((comment) => (
+                <div key={comment.id} className="reported-post-container reported-comment-container">
+                  <div className="comment-content-preview">
+                    <MessageSquare size={20} className="comment-preview-icon" />
+                    <div>
+                      <p className="comment-author">
+                        <strong>{comment.author_username}</strong> commented:
+                      </p>
+                      <p className="comment-text">"{comment.text}"</p>
+                    </div>
+                  </div>
+                  
+                  <div className="moderator-actions">
+                    <button 
+                      className="mod-btn suspend-btn" 
+                      onClick={() => handleBanUser(comment.author_username)}
+                      disabled={!comment.author_username}
+                    >
+                      <Ban className="mod-icon" />
+                      Ban {comment.author_username || 'Unknown'}
+                    </button>
+                    <button 
+                      className="mod-btn delete-btn" 
+                      onClick={() => handleDeleteCommentAdmin(comment.id)}
+                    >
+                      <Trash2 className="mod-icon" />
+                      Delete Comment
+                    </button>
+
+                    <button
+                      className="mod-btn clear-reports-btn"
+                      onClick={() => handleClearCommentReportsAdmin(comment.id)}
+                    >
+                      <RefreshCw className="mod-icon" />
+                      Clear Reports
+                    </button>
+                    <p className="report-count">{comment.report_count || 0} report(s)</p>
+                  </div>
+                  
+                  {comment.reports && comment.reports.length > 0 && (
+                    <div className="reports-reasons-list">
+                      <h4>Report Reasons:</h4>
+                      <ul>
+                        {comment.reports.map((report) => (
+                          <li key={report.id}>
+                            <span className="report-reason">
+                              {report.reason && report.reason.trim().length > 0 ? (
+                                report.reason
+                              ) : (
+                                <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>No reason given</span>
+                              )}
+                            </span>
+                            <span className="report-date">
+                              {new Date(report.created_at).toLocaleDateString()}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )
         )}
       </main>
     </div>
