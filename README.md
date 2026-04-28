@@ -6,9 +6,9 @@ A web app where you can review food from the dining halls. When you visit the we
 Go to the website at https://ic-eats.untitledham.com/ and leave a review!
 
 ## Diagrams, Documentation and Installation Instructions
-To view the diagrams please go to the [DIAGRAMS.md file](DIAGRAMS.md)
-To view the documentation please go to the [DOCUMENTATION.md file](DOCUMENTATION.md)
-To view installation instructions please go to the [INSTALL.md file](INSTALL.md)
+- To view the diagrams please go to the [DIAGRAMS.md file](DIAGRAMS.md)
+- To view the documentation please go to the [DOCUMENTATION.md file](DOCUMENTATION.md)
+- To view installation instructions please go to the [INSTALL.md file](INSTALL.md)
 
 
 
