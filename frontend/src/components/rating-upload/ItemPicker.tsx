@@ -44,7 +44,7 @@ function ItemPicker({
           onChange={(event) => onItemNameChange(event.target.value)}
           placeholder={
             selectedPlaceId
-              ? 'Filter items from the selected dining hall'
+              ? 'Start typing to search food items in this dining hall'
               : 'Select a dining hall first'
           }
           disabled={!selectedPlaceId}
@@ -70,7 +70,7 @@ function ItemPicker({
       {isLoadingMenu && <p className="helper-text">Loading menu...</p>}
 
       {selectedPlaceId && !isLoadingMenu && showItemPicker && !hasSearchQuery && (
-        <p className="helper-text">Search for a food item from this dining hall.</p>
+        <p className="helper-text">Start typing to search for a food item from this dining hall.</p>
       )}
 
       {selectedPlaceId &&
