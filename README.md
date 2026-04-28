@@ -27,3 +27,9 @@ Go to the website at https://ic-eats.untitledham.com/ and leave a review!
 - [**Sprint 2 Review**](https://docs.google.com/document/d/1KL6rkv4MW0a8b5-KF34KUUTz5c4iXRgHsZlXnkRVbjE/edit?usp=sharing)
 
 To view the daily standup log please go to the [Daily Standup Log](https://docs.google.com/document/d/1Bd0j40ErMJcD9kVfZHUjiKydrN5h3AueoKfGCXfYuHg/edit?usp=sharing)
+
+
+## LLM/Agent Usage:
+- Agents were used to speed up frontend development and to write boilerplate code.
+- Agents and LLM tools assisted with debugging and writing tests.
+- Copilot autocomplete was also used.
