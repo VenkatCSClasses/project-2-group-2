@@ -70,6 +70,7 @@ function buildDiningReviewsPath(options?: {
 
 function FeedPage({
   token,
+  onAuthExpired,
   onOpenUpload,
   onOpenProfile,
   onOpenDiningReviews,
@@ -107,6 +108,18 @@ function FeedPage({
       'Content-Type': 'application/json',
     }),
     [authHeaders]
+  )
+
+  const handleAuthResponse = useCallback(
+    (response: Response) => {
+      if (response.status === 401 || response.status === 403) {
+        onAuthExpired()
+        return true
+      }
+
+      return false
+    },
+    [onAuthExpired]
   )
 
   function updateThreadState(
@@ -154,6 +167,11 @@ function FeedPage({
       const response = await fetch(`${API_BASE_URL}/posts/${postId}`, {
         headers: authHeaders,
       })
+
+      if (handleAuthResponse(response)) {
+        return
+      }
+
       const data: PostDetailsResponse = await response.json()
 
       if (!response.ok) {
@@ -194,6 +212,12 @@ function FeedPage({
       const response = await fetch(`${API_BASE_URL}/posts/`, {
         headers: authHeaders,
       })
+
+      if (handleAuthResponse(response)) {
+        setPosts([])
+        return
+      }
+
       const data: PostsResponse = await response.json()
 
       if (!response.ok) {
@@ -210,7 +234,7 @@ function FeedPage({
     } finally {
       setLoading(false)
     }
-  }, [authHeaders])
+  }, [authHeaders, handleAuthResponse])
 
   const loadMenu = useCallback(async (placeKey: PlaceKey) => {
     setMenuLoading(true)
@@ -313,6 +337,11 @@ function FeedPage({
         const response = await fetch(`${API_BASE_URL}/accounts/me`, {
           headers: authHeaders,
         })
+
+        if (handleAuthResponse(response)) {
+          return
+        }
+
         const data = await response.json()
 
         if (response.ok && data?.username) {
@@ -330,7 +359,7 @@ function FeedPage({
     }
 
     void loadUser()
-  }, [authHeaders, loadPosts])
+  }, [authHeaders, handleAuthResponse, loadPosts])
 
   const shouldShowMenu = isDesktop || isMenuOpen
 
@@ -360,6 +389,10 @@ function FeedPage({
         headers: jsonHeaders,
         body: JSON.stringify({ vote }),
       })
+
+      if (handleAuthResponse(response)) {
+        return
+      }
 
       if (!response.ok) {
         setMessage('Could not save vote')
@@ -406,6 +439,10 @@ function FeedPage({
         }
       )
 
+      if (handleAuthResponse(response)) {
+        return
+      }
+
       if (!response.ok) {
         updateThreadState(postId, (current) => ({
           ...current,
@@ -447,6 +484,10 @@ function FeedPage({
         headers: authHeaders,
       })
 
+      if (handleAuthResponse(response)) {
+        return
+      }
+
       if (!response.ok) {
         setMessage('Could not remove post')
         return
@@ -483,6 +524,10 @@ function FeedPage({
         headers: authHeaders,
       })
 
+      if (handleAuthResponse(response)) {
+        return
+      }
+
       if (!response.ok) {
         setMessage('Could not report post')
         return
@@ -509,6 +554,10 @@ function FeedPage({
           headers: authHeaders,
         }
       )
+
+      if (handleAuthResponse(response)) {
+        return
+      }
 
       if (!response.ok) {
         updateThreadState(postId, (current) => ({
@@ -575,6 +624,10 @@ function FeedPage({
         headers: authHeaders,
       })
 
+      if (handleAuthResponse(response)) {
+        return
+      }
+
       if (!response.ok) {
         updateThreadState(postId, (current) => ({
           ...current,
@@ -630,6 +683,11 @@ function FeedPage({
           headers: authHeaders,
         }
       )
+
+      if (handleAuthResponse(response)) {
+        return
+      }
+
       const data = await response.json()
 
       if (!response.ok) {
