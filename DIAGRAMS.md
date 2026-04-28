@@ -20,7 +20,7 @@ graph LR
     delete_post([Delete Own Post])
     report_post([Report Post])
     search_food([Search and Filter Food])
-    view_rating([View Food Place and average rating])
+    view_rating([View Food Item and average rating])
 
     %% Mod
     view_reported_posts([View Reported Posts])
@@ -40,7 +40,6 @@ graph LR
   user --> rate_review
   user --> post_comment
   user --> delete_post
-  user --> view_predictions
   user --> report_post
   user --> search_food
   user --> view_rating
@@ -54,7 +53,7 @@ graph LR
   owner --> mod
   mod --> user
 ```
-[Also view on mermaid.live](https://mermaid.live/edit#pako:eNptVF1v2jAU_SuWpUpMgg4oHyEPk7Z23R6o1lFtD4MpcvElWEts5Dh0rOK_79qOWQx7SXzux_H1vUf3la4VB5rSXLPdlswXK0mIepGgO8sv9vfzjbWUineWDxipmVGNra5s0LcqxKyk_Vb1s6d6OlQGSm8kpFC5kBl-VW06y7lFb-cO-WRC9gJesp1WG1FAZ_kdEXn0KIrYAPDGfY_HyMeFFDLPtqwompA7ZyGf0RIid6oymQab0Fk-IiALByL_WpUlSNME3HoUIrAHcGJYIDhj4FAARliizvLOAYK9JJbr7LXAxdoIJavTi50FOPlas0KYA1Ebcq_U6Z0adkqbhnvhQMRbAdPrbbZRdmBPDhAmObkXhQEdUbkS8C3YoNBQ9JLHgq3B5bA9jjsH4mNsmk-8uiIohTaJqwO4Kys8ZdEYXXnVWW-YPMT9eS8P0Tuemcy8wD4wSYLITvc7aXqUiz1kTp-f8GQrwy6KPeomh5ADkvuDpSS93rtIj5GjLUNy6bHyu7S2hBc5W1qL7C0FXcY32oscLUn9r9qTjOJb_mklsrc0cknmh-27hV1tOaIht91hVm3b2Zw9n9srzh2Gdm4vfUmBxbLSLi1Bl0xw3FKvbtFQs4USVjTFI2f614qu5BHjWG3U00GuaWp0DV2qVZ1vabphRYWo3nFs-51guJ_KELJj8odSJ5hre02TjaoBfatqaWg6c6E0faW_adob9kfX_WQwTaaD_uxmOu7SA00Hyex6htbRsJ_MkhGaj136x5EPrvvjyfBmNJkl4-k4GU5GoZyPXOBCDVeCQw9-I7vFfPwLMbvmvg)
+[Also view on mermaid.live](https://mermaid.live/edit#pako:eNplVGGP2jAM_StRpJM6iWNQytH2w6TtGNskTjuBtg8rU5WjplRrkyptuWOI_z4naVkDEip59rPj2E8-0a1IgIY0lazck-VqwwkRrxykE31Xf7_fKUshEid6QqZktWhtTaVIP6qOs-HqWzUvJtX6WNVQGCMhuUgzHuNXNLUTLRV6v9TIBBNyyOA1LqXYZTk40U9E5Nkgi7EDSFr3Ao-WL8l4xtN4z_K8pcy1hXxFS8csRVXHElSAEz0jICsNLP9WFAXwuiU8GtQxsAdwybBCcJUhgRyQoRI50VwDgr0kKtclB5RC1i1npYHlr4DJ7T7eCdX4tQaE8YQssrwGSRZot56ONeFDu8agl3zD7usQdsCppUAMRUWZuLs7ghPt59BlQKKrqtpcq9aoq6uunsj40X7mR360nvHCeGx08olx0mnlcr9WmEFpdoBYy-wLnlRlOP7sgONPoYsBnpiDSknu7z9YsrIcfTWRW49S0a21px_L2ZOMZe8J4ZbfSshy9JRhJ_qvBsveU8FttWaepiHYuJ7DmmPf3Y2jb7sapcmnN4B2d3O5thempC6LykoHtABZsCzBfXLSK4HWeyhgQ0M8Jkz-2dANPyOPNbVYH_mWhrVsYEClaNI9DXcsrxA1ZYKdnWcMN0nRUUrGfwlxgalU17TRKAyQj6LhNQ0DTaXhib7R0HVHw9nIc4MgcB9m05k_oEcajsfu0Pf8ycibef50Mh0_nAf0r04-HnqTqeuN_cCf-fgLvK6cz0mGq6-7EjR6MrtTr9DzP5NRyBY)
 ## Sequence Diagram 1: Login and Register
 ```mermaid
 sequenceDiagram
