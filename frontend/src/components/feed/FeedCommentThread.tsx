@@ -13,6 +13,7 @@ type FeedCommentThreadProps = {
   thread: ThreadState
   viewerRole: ViewerRole
   viewerUsername: string
+  onOpenProfile?: (username: string) => void
   onDraftChange: (value: string) => void
   onReplyDraftChange: (commentId: string, value: string) => void
   onReplyToggle: (commentId: string) => void
@@ -27,6 +28,7 @@ function FeedCommentThread({
   thread,
   viewerRole,
   viewerUsername,
+  onOpenProfile,
   onDraftChange,
   onReplyDraftChange,
   onReplyToggle,
@@ -104,6 +106,7 @@ function FeedCommentThread({
           thread={thread}
           viewerRole={viewerRole}
           viewerUsername={viewerUsername}
+          onOpenProfile={onOpenProfile}
           collapsedById={visibleCollapsedById}
           onToggleCollapse={handleToggleCollapse}
           onReplyDraftChange={onReplyDraftChange}

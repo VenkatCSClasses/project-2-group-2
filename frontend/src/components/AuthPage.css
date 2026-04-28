@@ -110,3 +110,11 @@
   font-size: 15px;
   color: #444;
 }
+
+.auth-message.error {
+  color: #b42318;
+}
+
+.auth-message.success {
+  color: #067647;
+}

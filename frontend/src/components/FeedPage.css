@@ -75,9 +75,11 @@
   border-radius: 999px;
   display: grid;
   place-items: center;
-  background: white;
+  background: #f3f4f6;
   color: #111827;
-  font-size: 1.2rem;
+  font-size: 0.95rem;
+  font-weight: 800;
+  border: 1px solid #e5e7eb;
 }
 
 .profile-circle-img {
@@ -87,6 +89,16 @@
   object-fit: cover;
   border: none;
   background: transparent;
+}
+
+.feed-avatar-image {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  flex: 0 0 44px;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
+  background: #f3f4f6;
 }
 
 .feed-list {
@@ -131,6 +143,41 @@
   border: 1px solid #e5e7eb;
 }
 
+.feed-avatar-button,
+.feed-username-button,
+.feed-comment-avatar-button,
+.feed-comment-username-button {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.feed-username-button,
+.feed-comment-username-button {
+  color: #0f172a;
+}
+
+.feed-avatar-button,
+.feed-comment-avatar-button {
+  border-radius: 999px;
+}
+
+.feed-username-button:hover .feed-username,
+.feed-comment-username-button:hover .feed-comment-username {
+  text-decoration: underline;
+}
+
+.feed-avatar-button:focus-visible,
+.feed-username-button:focus-visible,
+.feed-comment-avatar-button:focus-visible,
+.feed-comment-username-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  border-radius: 8px;
+}
+
 .feed-card-heading {
   flex: 1;
   min-width: 0;
@@ -154,6 +201,7 @@
 }
 
 .feed-username {
+  color: #0f172a;
   font-weight: 800;
   font-size: 0.98rem;
 }
@@ -606,6 +654,17 @@
   color: #0f172a;
   font-size: 0.8rem;
   font-weight: 800;
+  flex: 0 0 30px;
+  margin-top: 1px;
+}
+
+.feed-comment-avatar-image {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
   flex: 0 0 30px;
   margin-top: 1px;
 }

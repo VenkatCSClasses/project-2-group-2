@@ -760,6 +760,9 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
               commentCount={post.comment_count ?? 0}
               viewerRole={currentUserRole}
               viewerUsername={currentUsername}
+              onOpenProfile={(username) =>
+                navigate(`/profile/${encodeURIComponent(username)}`)
+              }
               authorPfp={post.author_pfp_url}
               onToggleComments={() => void toggleComments(post.id)}
               onVote={(upvote) => void handleVote(post.id, upvote)}

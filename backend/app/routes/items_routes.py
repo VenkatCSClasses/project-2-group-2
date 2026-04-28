@@ -136,11 +136,14 @@ async def get_all_unique_items_by_place(
             continue
 
         matching_item_ids = [
-            other.id
-            for other in all_items
-            if other.name.strip().lower() == key
+            matching.id
+            for matching in db.query(FoodItem)
+            .filter(
+                FoodItem.food_place_id == place.id,
+                func.lower(FoodItem.name) == key,
+            )
+            .all()
         ]
-
         avg_rating = (
             db.query(func.avg(Review.star_rating))
             .filter(Review.food_item_id.in_(matching_item_ids))
@@ -202,7 +205,7 @@ async def review_item(request: Request, item_id: str, form: ReviewForm = Depends
         raise HTTPException(status_code=400, detail="Invalid UUID format")
 
     item = get_or_404(db, FoodItem, item_id)
-    user = get_or_404(db, User, current_user["user_id"])
+    user = get_or_404(db, User, UUID(current_user["user_id"]))
 
     image = form.image
 
