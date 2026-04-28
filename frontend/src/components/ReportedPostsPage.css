@@ -1,7 +1,7 @@
 .reported-posts-page {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  box-sizing: border-box;
   background-color: white;
   padding: 0 16px 24px;
 }
@@ -86,7 +86,6 @@
 }
 
 .reported-posts-content {
-  flex: 1;
   max-width: 1040px;
   margin: 0 auto;
   width: 100%;
@@ -112,6 +111,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  max-width: 1040px;
 }
 
 .card-wrapping-box {
@@ -222,7 +222,8 @@
 
 .reports-reasons-list li {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  justify-content: flex-start;
   align-items: flex-start;
   padding: 12px;
   background-color: white;
@@ -233,13 +234,14 @@
 .report-reason {
   font-size: 0.95rem;
   color: #374151;
+  text-align: left;
 }
 
 .report-date {
   font-size: 0.85rem;
   color: #6b7280;
   white-space: nowrap;
-  margin-left: 12px;
+  margin-top: 4px;
 }
 
 .comment-content-preview {
@@ -259,6 +261,7 @@
   margin: 0 0 4px 0;
   font-size: 0.95rem;
   color: #0f172a;
+  text-align: left;
 }
 
 .comment-text {
@@ -266,9 +269,19 @@
   font-size: 0.95rem;
   color: #374151;
   word-break: break-word;
+  text-align: left;
 }
 
-/* Make comments read-only in Reported Content */
+.reported-post-container {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-width: 1040px;
+}
 .read-only-comments .feed-comment-composer,
 .read-only-comments .feed-reply-composer,
 .read-only-comments .comment-action-button {
