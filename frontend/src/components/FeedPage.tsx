@@ -889,7 +889,7 @@ function FeedPage({
                   className="upload-choice-button"
                   onClick={() => handleUploadChoice('terrace')}
                 >
-                  Terraces
+                  Terrace
                 </button>
               </div>
 
@@ -942,21 +942,21 @@ function FeedPage({
               <button
                 type="button"
                 className={`menu-place-button ${
-                  selectedPlace === 'terrace' ? 'active' : ''
-                }`}
-                onClick={() => setSelectedPlace('terrace')}
-              >
-                Terrace
-              </button>
-
-              <button
-                type="button"
-                className={`menu-place-button ${
                   selectedPlace === 'campus' ? 'active' : ''
                 }`}
                 onClick={() => setSelectedPlace('campus')}
               >
                 Campus Center
+              </button>
+
+              <button
+                type="button"
+                className={`menu-place-button ${
+                  selectedPlace === 'terrace' ? 'active' : ''
+                }`}
+                onClick={() => setSelectedPlace('terrace')}
+              >
+                Terrace
               </button>
             </div>
 

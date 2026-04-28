@@ -508,13 +508,13 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
 
   return (
     <main className="profile-page">
-      <div className="profile-topbar">
-        <button className="back-button" onClick={onBack}>
-          <ArrowLeft size={20} /> Back
+      <header className="dining-reviews-header">
+        <button type="button" className="dining-reviews-back-button" onClick={onBack}>
+          <ArrowLeft size={24} />
         </button>
-        <h2>{isOwnProfile ? 'My Profile' : `${profile.username}'s Profile`}</h2>
-        <div style={{ width: '60px' }}></div>
-      </div>
+        <h2 className="dining-reviews-title">{isOwnProfile ? 'My Profile' : `${profile.username}'s Profile`}</h2>
+        <div className="header-spacer"></div>
+      </header>
 
       <div className="profile-content">
         <div className="profile-picture-section">
@@ -691,6 +691,8 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
                     onOpenProfile={(username) => navigate(`/profile/${encodeURIComponent(username)}`)}
        
                     authorPfp={post.author_pfp_url}
+                    showPlaceName
+                    placeName={post.food_place_name}
                     onToggleComments={() => void toggleComments(post.id)}
                     onVote={(vote) => void handleVote(post.id, vote)}
                     onDeletePost={() => void handleDeletePost(post.id)}
