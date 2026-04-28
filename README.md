@@ -28,6 +28,18 @@ Go to the website at https://ic-eats.untitledham.com/ and leave a review!
 
 To view the daily standup log please go to the [Daily Standup Log](https://docs.google.com/document/d/1Bd0j40ErMJcD9kVfZHUjiKydrN5h3AueoKfGCXfYuHg/edit?usp=sharing)
 
+## Technologies Used:
+- [Python 3.14](https://www.python.org/downloads/release/python-3144/) (Backend Language)
+- [FastAPI](https://fastapi.tiangolo.com/) (Backend API Framework)
+- [SQLAlchemy](https://www.sqlalchemy.org/) + [SQLModel](https://sqlmodel.tiangolo.com/) (ORM for database interactions)
+- [PostgreSQL](https://www.postgresql.org/) (database)
+- [Valkey](https://valkey.io/) (cache used for banned user tokens)
+- [argon2-cffi](https://pypi.org/project/argon2-cffi/) (for password hashing)
+- [React](https://react.dev/) (Frontend Framework)
+- [TypeScript](https://www.typescriptlang.org/) (Frontend Language)
+- [Vite](https://vitejs.dev/) (Frontend Build Tool)
+- [CSS](https://developer.mozilla.org/en-US/docs/Web/CSS) (Styling)
+- [Docker](https://www.docker.com/) (Containerization)
 
 ## LLM/Agent Usage:
 - Agents were used to speed up frontend development and to write boilerplate code.
