@@ -1,4 +1,5 @@
 import { ChevronDown, ChevronUp, MessageCircle } from "lucide-react";
+import { Link } from "react-router-dom";
 import FeedActionMenu from "./FeedActionMenu";
 import FeedCommentThread from "./FeedCommentThread";
 import type { Post, ThreadState, ViewerRole, VoteSelection } from "./types";
@@ -19,6 +20,10 @@ type FeedPostCardProps = {
   viewerUsername: string;
   onOpenProfile?: (username: string) => void;
   authorPfp?: string | null;
+  showPlaceName?: boolean;
+  placeName?: string | null;
+  itemLink?: string | null;
+  placeLink?: string | null;
   onToggleComments: () => void;
   onVote: (vote: VoteSelection) => void;
   onDeletePost: () => void;
@@ -33,6 +38,54 @@ type FeedPostCardProps = {
   onReportComment: (commentId: string) => void;
 };
 
+type PlaceKey = "campus" | "terrace";
+
+type PostWithPlaceAliases = Post & {
+  place_name?: string | null;
+  diningHall?: string | null;
+};
+
+function getPlaceKeyFromName(placeName?: string | null): PlaceKey | null {
+  if (!placeName) {
+    return null;
+  }
+
+  const normalized = placeName.trim().toLowerCase();
+
+  if (normalized.includes("campus")) {
+    return "campus";
+  }
+
+  if (normalized.includes("terrace")) {
+    return "terrace";
+  }
+
+  return null;
+}
+
+function buildDiningReviewsPath(options?: {
+  placeKey?: PlaceKey | null;
+  itemId?: string | null;
+  itemName?: string | null;
+}) {
+  const params = new URLSearchParams();
+
+  if (options?.placeKey) {
+    params.set("hall", options.placeKey);
+  }
+
+  if (options?.itemId) {
+    params.set("itemId", options.itemId);
+  }
+
+  if (options?.itemName) {
+    params.set("itemName", options.itemName);
+  }
+
+  const query = params.toString();
+  return query ? `/dining-reviews?${query}` : "/dining-reviews";
+}
+
 function FeedPostCard({
   post,
   apiBaseUrl,
@@ -42,6 +95,10 @@ function FeedPostCard({
   viewerUsername,
   onOpenProfile,
   authorPfp,
+  showPlaceName = false,
+  placeName: providedPlaceName,
+  itemLink,
+  placeLink,
   onToggleComments,
   onVote,
   onDeletePost,
@@ -55,10 +112,34 @@ function FeedPostCard({
   onDeleteComment,
   onReportComment,
 }: FeedPostCardProps) {
+  const postWithPlace = post as PostWithPlaceAliases;
   const username = post.author_username || "user";
   const ratingOutOfFive = (post.star_rating / 2).toFixed(1);
   const hasUpvoted = post.viewer_vote === "up";
   const hasDownvoted = post.viewer_vote === "down";
+  const placeName =
+    providedPlaceName ||
+    postWithPlace.food_place_name ||
+    postWithPlace.place_name ||
+    postWithPlace.diningHall;
+  const placeLabel = placeName?.replace(/\s+Dining Hall$/i, "");
+  const placeKey = getPlaceKeyFromName(placeName);
+  const resolvedPlaceLink =
+    placeLink ||
+    (placeKey
+      ? buildDiningReviewsPath({
+          placeKey,
+        })
+      : null);
+  const resolvedItemLink =
+    itemLink ||
+    (post.food_item_name && (post.food_item_id || placeKey)
+      ? buildDiningReviewsPath({
+          placeKey,
+          itemId: post.food_item_id,
+          itemName: post.food_item_name,
+        })
+      : null);
   const imageSrc = post.image_url
     ? post.image_url.startsWith("http")
       ? post.image_url
@@ -142,7 +223,33 @@ function FeedPostCard({
                   <span className="feed-meta-separator" aria-hidden="true">
                     •
                   </span>
-                  <span className="feed-item-name">{post.food_item_name}</span>
+                  {resolvedItemLink ? (
+                    <Link
+                      className="feed-item-name feed-inline-link"
+                      to={resolvedItemLink}
+                    >
+                      {post.food_item_name}
+                    </Link>
+                  ) : (
+                    <span className="feed-item-name">{post.food_item_name}</span>
+                  )}
+                </>
+              )}
+              {showPlaceName && placeLabel && (
+                <>
+                  <span className="feed-meta-separator" aria-hidden="true">
+                    •
+                  </span>
+                  {resolvedPlaceLink ? (
+                    <Link
+                      className="feed-place-name feed-inline-link"
+                      to={resolvedPlaceLink}
+                    >
+                      {placeLabel}
+                    </Link>
+                  ) : (
+                    <span className="feed-place-name">{placeLabel}</span>
+                  )}
                 </>
               )}
             </div>

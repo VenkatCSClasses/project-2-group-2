@@ -5,7 +5,7 @@ from uuid import UUID
 from sqlalchemy import func
 from sqlmodel import Session
 
-from app.models import Comment, FoodItem, Report, Review, User, Vote
+from app.models import Comment, FoodItem, FoodPlace, Report, Review, User, Vote
 
 VoteSelection = Literal["up", "down"] | None
 
@@ -176,6 +176,16 @@ def _food_item_map(
     return {food_item.id: food_item for food_item in food_items}
 
 
+def _food_place_map(
+    db: Session, food_place_ids: Sequence[UUID]
+) -> dict[UUID, FoodPlace]:
+    if not food_place_ids:
+        return {}
+
+    food_places = db.query(FoodPlace).filter(FoodPlace.id.in_(food_place_ids)).all()
+    return {food_place.id: food_place for food_place in food_places}
+
+
 def serialize_review(
     db: Session,
     review: Review,
@@ -183,6 +193,7 @@ def serialize_review(
     *,
     author: User | None = None,
     food_item: FoodItem | None = None,
+    food_place: FoodPlace | None = None,
     vote_totals: tuple[int, int] | None = None,
     viewer_vote: VoteSelection = None,
     report_count: int | None = None,
@@ -191,6 +202,8 @@ def serialize_review(
     author = author or db.get(User, review.author_id)
     if review.food_item_id and food_item is None:
         food_item = db.get(FoodItem, review.food_item_id)
+    if food_item and food_item.food_place_id and food_place is None:
+        food_place = db.get(FoodPlace, food_item.food_place_id)
     upvotes, downvotes = vote_totals or votes(db, review)
 
     data = {
@@ -200,6 +213,7 @@ def serialize_review(
         "author_pfp_url": author.profile_image_url if author else None,
         "food_item_id": review.food_item_id,
         "food_item_name": food_item.name if food_item else None,
+        "food_place_name": food_place.name if food_place else None,
         "star_rating": review.star_rating,
         "content": review.content,
         "image_url": review.image_url,
@@ -274,6 +288,14 @@ def serialize_reviews(
     food_items = _food_item_map(
         db, [review.food_item_id for review in reviews if review.food_item_id]
     )
+    food_places = _food_place_map(
+        db,
+        [
+            food_item.food_place_id
+            for food_item in food_items.values()
+            if food_item.food_place_id
+        ],
+    )
     vote_counts = _review_vote_counts(db, review_ids)
     viewer_votes = _review_viewer_votes(db, review_ids, viewer_user_id)
     comment_counts = _review_comment_counts(db, review_ids)
@@ -288,6 +310,11 @@ def serialize_reviews(
             reports=reports,
             author=authors.get(review.author_id),
             food_item=food_items.get(review.food_item_id),
+            food_place=food_places.get(food_items[review.food_item_id].food_place_id)
+            if review.food_item_id
+            and review.food_item_id in food_items
+            and food_items[review.food_item_id].food_place_id
+            else None,
             vote_totals=vote_counts.get(review.id, (0, 0)),
             viewer_vote=viewer_votes.get(review.id),
             report_count=report_counts.get(review.id),
