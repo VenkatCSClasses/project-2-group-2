@@ -176,6 +176,11 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
       setMenuLoading(true)
       setMenuError('')
       setReviewsError('')
+      setMenuItems([])
+
+      if (!options?.skipPlaceReviews) {
+        void loadAllPlaceReviews(placeKey)
+      }
 
       try {
         const placeName = PLACE_NAMES[placeKey]
@@ -185,19 +190,13 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
         const data = await response.json()
 
         if (!response.ok) {
-          setMenuItems([])
           setMenuError('Could not load dining hall items')
           return
         }
 
         setMenuItems(data.items ?? [])
-
-        if (!options?.skipPlaceReviews) {
-          void loadAllPlaceReviews(placeKey)
-        }
       } catch (error) {
         console.error(error)
-        setMenuItems([])
         setMenuError('Network error while loading dining hall items')
       } finally {
         setMenuLoading(false)
@@ -303,22 +302,28 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
 
     if (!matchedItem) {
       if (queryItemId) {
-        void loadItemReviews({
-          id: queryItemId,
-          name: queryItemNameRaw?.trim() || 'Selected item',
-          description: null,
-          image_url: null,
-          average_rating: null,
-        })
+        if (selectedItem?.id !== queryItemId) {
+          void loadItemReviews({
+            id: queryItemId,
+            name: queryItemNameRaw?.trim() || 'Selected item',
+            description: null,
+            image_url: null,
+            average_rating: null,
+          })
+        }
         return
       }
 
       updateReviewQueryParams(selectedPlace)
-      void loadAllPlaceReviews(selectedPlace)
+      if (!selectedItem) {
+        void loadAllPlaceReviews(selectedPlace)
+      }
       return
     }
 
-    void loadItemReviews(matchedItem)
+    if (selectedItem?.id !== matchedItem.id) {
+      void loadItemReviews(matchedItem)
+    }
   }, [
     loadAllPlaceReviews,
     loadItemReviews,
@@ -855,7 +860,7 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
                 updateReviewQueryParams('terrace')
               }}
             >
-              Terraces
+              Terrace
             </button>
           </div>
 
@@ -891,7 +896,7 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
               <h2 className="panel-title">
                 {selectedPlace === 'campus'
                   ? 'Campus Center Items'
-                  : 'Terraces Items'}
+                  : 'Terrace Items'}
               </h2>
               <span className="panel-subtitle">{sortedMenuItems.length} items</span>
             </div>
@@ -913,12 +918,10 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
                   onClick={() => {
                     if (selectedItem?.id === item.id) {
                       updateReviewQueryParams(selectedPlace)
-                      void loadAllPlaceReviews(selectedPlace)
                       return
                     }
 
                     updateReviewQueryParams(selectedPlace, item)
-                    void loadItemReviews(item)
                   }}
                 />
               ))}
@@ -933,7 +936,7 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
                     <h2 className="selected-item-title">
                       {selectedPlace === 'campus'
                         ? 'All Campus Center Reviews'
-                        : 'All Terraces Reviews'}
+                        : 'All Terrace Reviews'}
                     </h2>
                   </div>
                   <div className="review-sort-row">
@@ -970,7 +973,6 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
                       className="clear-selected-item-button"
                       onClick={() => {
                         updateReviewQueryParams(selectedPlace)
-                        void loadAllPlaceReviews(selectedPlace)
                       }}
                     >
                       Back to all reviews

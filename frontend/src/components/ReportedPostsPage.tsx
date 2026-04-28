@@ -18,7 +18,7 @@ export default function ReportedPostsPage({ token, onBack }: ReportedPostsPagePr
   const [activeTab, setActiveTab] = useState<'posts' | 'comments'>('posts');
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
-  const [threadStates] = useState<Record<string, ThreadState>>({});
+  const [threadStates, setThreadStates] = useState<Record<string, ThreadState>>({});
 
   const authHeaders = useMemo(
     () => (token ? { Authorization: `Bearer ${token}` } : undefined),
@@ -144,8 +144,61 @@ export default function ReportedPostsPage({ token, onBack }: ReportedPostsPagePr
     }
   };
 
+  // Implement loading thread state
+  const handleToggleComments = async (postId: string) => {
+    const thread = threadStates[postId] ?? createInitialThreadState();
+    const shouldOpen = !thread.isOpen;
+
+    setThreadStates((prev) => ({
+      ...prev,
+      [postId]: {
+        ...thread,
+        isOpen: shouldOpen,
+        error: shouldOpen ? thread.error : '',
+        replyTargetId: shouldOpen ? thread.replyTargetId : null,
+      }
+    }));
+
+    if (shouldOpen && !thread.loading) {
+      setThreadStates((prev) => ({
+        ...prev,
+        [postId]: { ...prev[postId], loading: true, error: '' },
+      }));
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/posts/${postId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          setThreadStates((prev) => ({
+            ...prev,
+            [postId]: { ...prev[postId], loading: false, error: 'Could not load comments' },
+          }));
+          return;
+        }
+
+        const comments = data.comments ?? [];
+        setThreadStates((prev) => ({
+          ...prev,
+          [postId]: {
+            ...prev[postId],
+            loading: false,
+            comments,
+            error: '',
+          },
+        }));
+      } catch {
+        setThreadStates((prev) => ({
+          ...prev,
+          [postId]: { ...prev[postId], loading: false, error: 'Network error loading comments' },
+        }));
+      }
+    }
+  };
+
   const handleVote = (_postId: string, _vote: VoteSelection) => {};
-  const handleToggleComments = (_postId: string) => {};
   const handleDraftChange = (_postId: string, _value: string) => {};
   const handleReplyDraftChange = (_postId: string, _commentId: string, _value: string) => {};
   const handleReplyToggle = (_postId: string, _commentId: string) => {};
@@ -157,26 +210,35 @@ export default function ReportedPostsPage({ token, onBack }: ReportedPostsPagePr
 
   return (
     <div className="reported-posts-page">
-      <header className="page-header">
-        <button className="back-button" onClick={onBack} aria-label="Go back">
-          <ArrowLeft className="icon" />
+      <div className="dining-reviews-shell">
+        <header className="dining-reviews-header">
+        <button
+          type="button"
+          className="dining-reviews-back-button"
+          onClick={onBack}
+        >
+          <ArrowLeft size={24} />
         </button>
-        <h2 className="page-title">Reported Content</h2>
+
+        <h1 className="dining-reviews-title">Reported Content</h1>
+        <div className="header-spacer"></div>
       </header>
 
       <div className="reports-tabs">
-        <button 
-          className={`tab-btn ${activeTab === 'posts' ? 'active' : ''}`}
-          onClick={() => setActiveTab('posts')}
-        >
-          Reported Posts ({posts.length})
-        </button>
-        <button 
-          className={`tab-btn ${activeTab === 'comments' ? 'active' : ''}`}
-          onClick={() => setActiveTab('comments')}
-        >
-          Reported Comments ({comments.length})
-        </button>
+        <div className="reports-selector">
+          <button 
+            className={`reports-selector-button ${activeTab === 'posts' ? 'active' : ''}`}
+            onClick={() => setActiveTab('posts')}
+          >
+            Reported Posts ({posts.length})
+          </button>
+          <button 
+            className={`reports-selector-button ${activeTab === 'comments' ? 'active' : ''}`}
+            onClick={() => setActiveTab('comments')}
+          >
+            Reported Comments ({comments.length})
+          </button>
+        </div>
       </div>
 
       <main className="reported-posts-content">
@@ -194,7 +256,7 @@ export default function ReportedPostsPage({ token, onBack }: ReportedPostsPagePr
           ) : (
             <div className="posts-list">
               {posts.map((post) => (
-                <div key={post.id} className="reported-post-container">
+                <div key={post.id} className="reported-post-container read-only-comments">
                   <div className="card-wrapping-box">
                     <FeedPostCard
                       post={post}
@@ -204,6 +266,8 @@ export default function ReportedPostsPage({ token, onBack }: ReportedPostsPagePr
                       viewerRole={'admin' as ViewerRole}
                       viewerUsername={'admin'}
                       authorPfp={post.author_pfp_url}
+                      showPlaceName
+                      placeName={post.food_place_name}
                       onToggleComments={() => handleToggleComments(post.id)}
                       onVote={(vote) => handleVote(post.id, vote)}
                       onDeletePost={() => handleDeletePost(post.id)}
@@ -343,6 +407,7 @@ export default function ReportedPostsPage({ token, onBack }: ReportedPostsPagePr
           )
         )}
       </main>
+      </div>
     </div>
   );
 }

@@ -61,7 +61,7 @@
 
 .form-group label {
   font-size: 0.98rem;
-  font-weight: 600;
+  font-weight: 700;
   color: #111827;
 }
 
@@ -122,7 +122,7 @@
   border-radius: 14px;
   padding: 14px 18px;
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -131,7 +131,7 @@
   border: none;
   border-radius: 16px;
   padding: 16px 20px;
-  background: black;
+  background: #111827;
   color: white;
   font-size: 1rem;
   font-weight: 700;
@@ -140,7 +140,7 @@
 
 .result-box {
   border: 1px solid #eceef2;
-  background: #fafafa;
+  background: #f9fafb;
   border-radius: 18px;
   padding: 16px 18px;
 }
@@ -148,7 +148,7 @@
 .result-label {
   margin: 0 0 12px;
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 700;
   color: #111827;
 }
 
@@ -176,7 +176,7 @@
   padding: 0;
   color: #111111;
   font-size: 0.98rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   text-align: left;
 }
@@ -237,7 +237,7 @@
   margin: 0;
   color: #111827;
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.35;
 }
 
@@ -268,7 +268,7 @@
   background: transparent;
   color: #111111;
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   padding: 0;
 }

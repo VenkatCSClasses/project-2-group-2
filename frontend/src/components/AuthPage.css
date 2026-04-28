@@ -22,7 +22,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  background: #f3f3f3;
+  background: #f3f4f6;
   border-radius: 999px;
   padding: 4px;
   margin: 0 auto 18px;
@@ -37,11 +37,11 @@
   border-radius: 999px;
   padding: 8px 12px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
 }
 .auth-tab.active {
-  background: black;
+  background: #111827;
   color: white;
 }
 
@@ -58,12 +58,12 @@
 
 .auth-form input {
   width: 100%;
-  border: 1px solid #dcdfe4;
+  border: 1px solid #e5e7eb;
   border-radius: 14px;
   padding: 16px;
   font-size: 17px;
-  background: #fafafa;
-  color: black;
+  background: #f9fafb;
+  color: #111827;
   outline: none;
 }
 
@@ -76,7 +76,7 @@
   border: none;
   border-radius: 14px;
   padding: 16px;
-  background: black;
+  background: #111827;
   color: white;
   font-size: 17px;
   font-weight: 700;
