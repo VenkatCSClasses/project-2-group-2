@@ -3,6 +3,8 @@
 A web app where you can review food from the dining halls. When you visit the website you can see a feed with all the recent/popular reviews and the current/upcoming menu. You can also leave a new review. When leaving a review you select the dining hall, the date, what meal it is for, and then select the food item from a list of what's currently on the menu. A review includes a picture of the food, a written description, and a star-rating on several criteria. You can leave a comment on a review, vote if it's good or not, and report it. Each user has a profile page showing all the reviews they have made. In addition, each dining hall has its own page where you can see the current menu, and reviews sorted by new/votes/rating. You can also visit a page for each food item that shows stats, reviews, and when it will next appear in the menu. Some accounts are granted moderator permission, they can then view reported posts, delete any post, and ban users.
 
 
+Go to the website at https://ic-eats.untitledham.com/ and leave a review!
+
 ## Diagrams, Documentation and Installation Instructions
 To view the diagrams please go to the [DIAGRAMS.md file](DIAGRAMS.md)
 To view the documentation please go to the [DOCUMENTATION.md file](DOCUMENTATION.md)
