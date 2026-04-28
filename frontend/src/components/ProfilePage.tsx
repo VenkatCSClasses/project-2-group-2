@@ -463,6 +463,32 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
     }
   };
 
+  const handleRoleChange = async (newRole: string) => {
+    if (viewer?.role !== 'admin' || isOwnProfile || !profile) return;
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/accounts/${encodeURIComponent(profile.username)}/set-role?role=${newRole}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        setMessage(data?.detail || 'Failed to update role');
+        return;
+      }
+
+      const data = await response.json();
+      setMessage(data.message || 'Role updated successfully');
+      setProfile((prev) => prev ? { ...prev, role: newRole } : null);
+    } catch (error) {
+      console.error(error);
+      setMessage('Network error updating role');
+    }
+  };
+
   if (loading) {
     return <div className="profile-page"><p>Loading profile...</p></div>;
   }
@@ -618,7 +644,19 @@ function ProfilePage({ token, onBack }: ProfilePageProps) {
               <div className="profile-row">
                 <div className="profile-label">Role</div>
                 <div className="profile-val">
-                  <span>{profile.role}</span>
+                  {viewer?.role === 'admin' && !isOwnProfile ? (
+                    <select
+                      className="profile-role-select"
+                      value={profile.role}
+                      onChange={(e) => handleRoleChange(e.target.value)}
+                    >
+                      <option value="user">user</option>
+                      <option value="moderator">moderator</option>
+                      <option value="admin">admin</option>
+                    </select>
+                  ) : (
+                    <span>{profile.role}</span>
+                  )}
                 </div>
               </div>
             </div>
