@@ -11,6 +11,8 @@ Upon accessing the page you will be greeted with a login/register page.
 
 ![login](images/login.png)
 
+# User Guide
+
 You can register a new account by clicking on register and filling out the form.
 ![register](images/register.png)
 Please use a valid email address and a strong password when registering.
@@ -74,3 +76,32 @@ Lets view someone else's profile, go back to the main feed  (by hitting the back
 
 You can see their past reviews and some profile information from this screen.
 ![alt text](images/someone_else_profile.png)
+
+This is not a review, so lets report it by clicking the report button on the review.
+![Report a review](images/report.png)
+
+Fill in your report and click submit to report the review to the moderators.
+![Leave a report](images/leave_report.png)
+
+# Admin/Moderator Guide
+A admin or moderator user has special permissions that allow them to manage the content on the website. You can log in as the default admin user with the following credentials:
+- Username: root 
+- Password: root
+
+Note: It is highly recommended to change the default admin password after logging in for the first time.
+
+Also these credentials were changed for the hosted version and only apply to local installations.
+
+Lets look at the reports that have been left by users.
+Click on your pfp in the top right and click on "Reported Posts" to access the reported posts page. This page is only accessible to admins and moderators.
+![Reported Posts Button](images/reported_posts.png)
+
+From here you can see all reported posts and the reasons underneath them.
+![Reported Posts Page](images/reported_posts_page.png)
+Click on delete post to delete the review, clear reports to clear the reports to remove all reports on the review, or ban user to ban the user who left the review (this will also delete all their reviews and comments).
+
+From the feed page you can also click the 3 dots and remove any review or comment without having to go to the reported posts page.
+![Remove Review](images/remove_review.png)
+
+
+Finally if admins want to promote a user.
