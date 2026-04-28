@@ -76,6 +76,12 @@ export type Comment = {
   viewer_vote: VoteSelection
 }
 
+export type ReportedComment = Comment & {
+  latest_reported_at: string
+  report_count: number
+  reports: Report[]
+}
+
 export type PostsResponse = {
   start: number
   limit: number

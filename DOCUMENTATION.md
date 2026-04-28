@@ -103,5 +103,5 @@ Click on delete post to delete the review, clear reports to clear the reports to
 From the feed page you can also click the 3 dots and remove any review or comment without having to go to the reported posts page.
 ![Remove Review](images/remove_review.png)
 
-
-Finally if admins want to promote a user.
+Moderators can do the above actions, but they cannot set the role of users, only admins can do that. To set the role of a user, go to their profile and use the role dropdown to set their role to either user, moderator or admin.
+![Set Role](images/set-role.png)
