@@ -35,13 +35,15 @@ This will start the PostgreSQL and Valkey containers.
 
 In a separate terminal, start the backend server:
 ```bash
-cd backend 
+cd backend
+uv sync
 uv run fastapi dev main.py
 ```
 
 In another terminal, start the frontend development server:
 ```bash
 cd frontend
+bun install
 bun dev
 ```
 

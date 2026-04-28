@@ -15,9 +15,14 @@ type UploadSelection = {
   itemName?: string
 }
 
+const getCookie = (name: string) => {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'))
+  return match ? match[2] : null
+}
+
 function App() {
   const navigate = useNavigate()
-  const [token, setToken] = useState<string | null>(localStorage.getItem('accessToken'))
+  const [token, setToken] = useState<string | null>(getCookie('accessToken'))
   const [showPfpSetup, setShowPfpSetup] = useState(false)
   const [uploadSelection, setUploadSelection] = useState<UploadSelection>({
     diningHall: '',
@@ -39,7 +44,7 @@ function App() {
 
   const LogoutRoute = () => {
     useEffect(() => {
-      localStorage.removeItem('accessToken')
+      document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Strict;'
       setToken(null)
       navigate('/login')
     }, [])

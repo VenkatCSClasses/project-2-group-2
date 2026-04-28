@@ -146,7 +146,8 @@ function AuthPage({ onAuthSuccess, onRegisterSuccess }: AuthPageProps) {
         return
       }
 
-      localStorage.setItem('accessToken', token)
+      document.cookie = `accessToken=${token}; path=/; SameSite=Strict`
+
 
       if (mode === 'register') {
         onRegisterSuccess(token)
