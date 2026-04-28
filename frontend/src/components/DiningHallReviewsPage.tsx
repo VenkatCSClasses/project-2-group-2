@@ -57,10 +57,7 @@ type ReviewSortMode = 'newest' | 'highest' | 'lowest'
 function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [selectedPlace, setSelectedPlace] = useState<PlaceKey>(() => {
-    const queryPlace = searchParams.get('hall')
-    return parsePlaceKey(queryPlace) ?? 'campus'
-  })
+  const selectedPlace = (parsePlaceKey(searchParams.get('hall')) ?? 'campus') as PlaceKey
   const [sortMode, setSortMode] = useState<SortMode>('highest')
   const [searchQuery, setSearchQuery] = useState('')
   const [reviewSortMode, setReviewSortMode] = useState<ReviewSortMode>('newest')
@@ -214,14 +211,6 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
     const hasItemQuery = Boolean(searchParams.get('itemId') || searchParams.get('itemName'))
     void loadMenu(selectedPlace, { skipPlaceReviews: hasItemQuery })
   }, [loadMenu, searchParams, selectedPlace])
-
-  useEffect(() => {
-    const queryPlace = parsePlaceKey(searchParams.get('hall'))
-
-    if (queryPlace && queryPlace !== selectedPlace) {
-      setSelectedPlace(queryPlace)
-    }
-  }, [searchParams, selectedPlace])
 
   useEffect(() => {
     async function loadUser() {
@@ -843,7 +832,6 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
                 selectedPlace === 'campus' ? 'active' : ''
               }`}
               onClick={() => {
-                setSelectedPlace('campus')
                 updateReviewQueryParams('campus')
               }}
             >
@@ -856,7 +844,6 @@ function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
                 selectedPlace === 'terrace' ? 'active' : ''
               }`}
               onClick={() => {
-                setSelectedPlace('terrace')
                 updateReviewQueryParams('terrace')
               }}
             >
