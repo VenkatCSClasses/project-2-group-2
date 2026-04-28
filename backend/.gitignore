@@ -25,3 +25,4 @@ build/
 .env
 .ruff_cache/
 uploads/*
+.pytest_cache/

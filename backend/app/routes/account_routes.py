@@ -11,8 +11,41 @@ from app.routes.helpers import parse_uuid
 # This will be mounted at "/accounts" in main.py, so all routes here will be prefixed with /accounts
 router = APIRouter()
 
+
+def _can_view_email(user: User, current_user: dict | None) -> bool:
+    if current_user is None:
+        return False
+
+    if current_user.get("role") == UserRole.ADMIN.value:
+        return True
+
+    return current_user.get("user_id") == str(user.id)
+
+
+def _serialize_account(
+    user: User,
+    current_user: dict | None,
+    include_profile_picture: bool = False,
+) -> dict:
+    account = {
+        "username": user.username,
+        "email": user.email if _can_view_email(user, current_user) else None,
+        "role": user.role.value,
+    }
+
+    if include_profile_picture:
+        account["profile_picture"] = user.profile_image_url
+
+    return account
+
+
 @router.get("/")
-async def get_accounts(start: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+async def get_accounts(
+    start: int = 0,
+    limit: int = 10,
+    current_user: dict | None = Depends(get_optional_current_user),
+    db: Session = Depends(get_db),
+):
     """
     Get a list of user accounts.
 
@@ -27,11 +60,7 @@ async def get_accounts(start: int = 0, limit: int = 10, db: Session = Depends(ge
         "start": start,
         "limit": limit,
         "accounts": [
-            {"username": user.username, 
-            "email": user.email, 
-            "role": user.role.value, 
-            "profile_picture": user.profile_image_url
-            }
+            _serialize_account(user, current_user, include_profile_picture=True)
             for user in users
         ],
     }
@@ -101,7 +130,11 @@ async def get_user_posts(
 
 
 @router.get("/search")
-async def search_accounts(query: str, db: Session = Depends(get_db)):
+async def search_accounts(
+    query: str,
+    current_user: dict | None = Depends(get_optional_current_user),
+    db: Session = Depends(get_db),
+):
     """
     Search for user accounts.
 
@@ -114,7 +147,7 @@ async def search_accounts(query: str, db: Session = Depends(get_db)):
         "message": "Search completed successfully",
         "query": query,
         "accounts": [
-            {"username": user.username, "email": user.email, "role": user.role.value}
+            _serialize_account(user, current_user)
             for user in users
         ],
     }
@@ -137,9 +170,7 @@ async def get_reported_accounts(current_user: dict = Depends(get_current_moderat
     for username in reported_usernames:
         user = db.exec(select(User).where(User.username == username)).first()
         if user is not None:
-            reported_accounts.append(
-                {"username": user.username, "email": user.email, "role": user.role.value}
-            )
+            reported_accounts.append(_serialize_account(user, current_user))
 
     return {
         "message": "Reported accounts retrieved successfully",
@@ -164,13 +195,11 @@ async def get_account(
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
 
-    can_view_email = bool(current_user and current_user.get("user_id") == str(user.id))
-
     return {
         "message": "Account retrieved successfully",
         "username": username,
         "account_info": {
-            "email": user.email if can_view_email else None,
+            "email": user.email if _can_view_email(user, current_user) else None,
             "role": user.role.value,
             "profile_picture": user.profile_image_url,
         },

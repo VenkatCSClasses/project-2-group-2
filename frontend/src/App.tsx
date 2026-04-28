@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { jwtDecode } from 'jwt-decode'
 import './App.css'
 import FeedPage from './components/FeedPage'
 import ProfilePicturePage from './components/ProfilePicturePage'
@@ -15,9 +16,21 @@ type UploadSelection = {
   itemName?: string
 }
 
+type TokenInfo = {
+  exp?: number
+}
+
 const getCookie = (name: string) => {
   const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'))
   return match ? match[2] : null
+}
+
+function LogoutRoute({ onLogout }: { onLogout: () => void }) {
+  useEffect(() => {
+    onLogout()
+  }, [onLogout])
+
+  return null
 }
 
 function App() {
@@ -29,6 +42,39 @@ function App() {
     itemId: '',
     itemName: '',
   })
+
+  const handleLogout = useCallback(() => {
+    document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Strict;'
+    setToken(null)
+    setShowPfpSetup(false)
+    navigate('/login', { replace: true })
+  }, [navigate])
+
+  useEffect(() => {
+    if (!token) {
+      return
+    }
+
+    let millisecondsUntilExpiry = 0
+
+    try {
+      const { exp } = jwtDecode<TokenInfo>(token)
+
+      if (!exp) {
+        throw new Error('Token is missing an expiration')
+      }
+
+      millisecondsUntilExpiry = Math.max(0, exp * 1000 - Date.now())
+    } catch (error) {
+      console.error('Failed to decode auth token', error)
+    }
+
+    const timeoutId = window.setTimeout(handleLogout, millisecondsUntilExpiry)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [handleLogout, token])
 
   if (showPfpSetup && token) {
     return (
@@ -42,19 +88,10 @@ function App() {
     )
   }
 
-  const LogoutRoute = () => {
-    useEffect(() => {
-      document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Strict;'
-      setToken(null)
-      navigate('/login')
-    }, [])
-    return null
-  }
-
   return (
     <Routes>
       <Route path="/" element={<Navigate to={token ? "/feed" : "/login"} replace />} />
-      <Route path="/logout" element={<LogoutRoute />} />
+      <Route path="/logout" element={<LogoutRoute onLogout={handleLogout} />} />
 
       {!token ? (
         <>
@@ -83,6 +120,7 @@ function App() {
             element={
               <FeedPage
                 token={token}
+                onAuthExpired={handleLogout}
                 onOpenUpload={(selection) => {
                   setUploadSelection(selection)
                   navigate('/upload')
