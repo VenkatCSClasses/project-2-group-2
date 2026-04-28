@@ -7,6 +7,9 @@
 }
 
 .feed-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   display: grid;
   grid-template-columns: 56px 1fr 56px;
   align-items: center;
@@ -235,6 +238,24 @@
 .feed-item-name {
   color: #6b7280;
   font-size: 0.92rem;
+}
+
+.feed-place-name {
+  color: #374151;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.feed-inline-link {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.feed-inline-link:hover,
+.feed-inline-link:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  color: #111827;
 }
 
 .feed-card-content {

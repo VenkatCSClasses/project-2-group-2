@@ -1,3 +1,4 @@
+import MenuItemCard from '../MenuItemCard'
 import type { FormErrors, ItemResult } from './types'
 
 type ItemPickerProps = {
@@ -27,6 +28,10 @@ function ItemPicker({
   onSelectItem,
   onShowPicker,
 }: ItemPickerProps) {
+  const hasSearchQuery = itemName.trim().length > 0
+  const visibleItems = filteredMenuItems.slice(0, 8)
+  const hiddenResultCount = filteredMenuItems.length - visibleItems.length
+
   return (
     <>
       <div className="form-group">
@@ -39,7 +44,7 @@ function ItemPicker({
           onChange={(event) => onItemNameChange(event.target.value)}
           placeholder={
             selectedPlaceId
-              ? 'Filter items from the selected dining hall'
+              ? 'Start typing to search food items in this dining hall'
               : 'Select a dining hall first'
           }
           disabled={!selectedPlaceId}
@@ -64,27 +69,39 @@ function ItemPicker({
 
       {isLoadingMenu && <p className="helper-text">Loading menu...</p>}
 
-      {selectedPlaceId && !isLoadingMenu && showItemPicker && filteredMenuItems.length > 0 && (
-        <div className="result-box">
+      {selectedPlaceId && !isLoadingMenu && showItemPicker && !hasSearchQuery && (
+        <p className="helper-text">Start typing to search for a food item from this dining hall.</p>
+      )}
+
+      {selectedPlaceId &&
+        !isLoadingMenu &&
+        showItemPicker &&
+        hasSearchQuery &&
+        filteredMenuItems.length === 0 && (
+          <p className="helper-text">No matching menu items found.</p>
+        )}
+
+      {selectedPlaceId && !isLoadingMenu && showItemPicker && hasSearchQuery && visibleItems.length > 0 && (
+        <div className="item-search-results">
           <p className="result-label">
             {selectedItemId ? 'Change food item' : 'Select a food item'}
           </p>
-          <ul className="result-list">
-            {filteredMenuItems.map((item) => (
-              <li key={item.id} className="result-item">
-                <button
-                  type="button"
-                  className="result-button"
-                  onClick={() => onSelectItem(item)}
-                >
-                  {item.name}
-                </button>
-                {item.description ? (
-                  <span className="result-description">{item.description}</span>
-                ) : null}
-              </li>
+          <div className="item-card-results">
+            {visibleItems.map((item) => (
+              <MenuItemCard
+                key={item.id}
+                name={item.name}
+                description={item.description}
+                isSelected={selectedItemId === item.id}
+                onClick={() => onSelectItem(item)}
+              />
             ))}
-          </ul>
+          </div>
+          {hiddenResultCount > 0 && (
+            <p className="helper-text">
+              {hiddenResultCount} more results. Keep typing to narrow it down.
+            </p>
+          )}
         </div>
       )}
 
