@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import FeedPostCard from './feed/FeedPostCard'
 import MenuItemCard from './MenuItemCard'
 import { collectCommentSubtreeIds } from './feed/commentThread'
@@ -55,6 +55,7 @@ type SortMode = 'highest' | 'lowest'
 type ReviewSortMode = 'newest' | 'highest' | 'lowest'
 
 function DiningHallReviewsPage({ token, onBack }: DiningHallReviewsPageProps) {
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedPlace, setSelectedPlace] = useState<PlaceKey>(() => {
     const queryPlace = searchParams.get('hall')

@@ -135,16 +135,18 @@
 
 .dining-items-panel {
   padding: 20px;
-  min-height: 74vh;
+  height: 74vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .dining-review-cards-panel {
   padding: 20px;
-  min-height: 74vh;
+  height: 74vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .panel-heading-row {
@@ -318,6 +320,7 @@
   .dining-items-panel,
   .dining-review-cards-panel {
     min-height: auto;
+    height: auto;
   }
 
   .dining-items-scroll,
@@ -396,19 +399,4 @@
     justify-content: space-between;
   }
 }
-.dining-items-panel {
-  padding: 20px;
-  height: 74vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
 
-.dining-items-scroll {
-  flex: 1;
-  overflow-y: auto;
-  padding-right: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
